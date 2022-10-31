@@ -1,0 +1,81 @@
+package io.github.gaming32.scratch2jvm.parser.ast
+
+import com.google.gson.JsonArray
+import com.google.gson.JsonElement
+import io.github.gaming32.scratch2jvm.parser.data.ScratchVariable
+
+public enum class ScratchInputTypes(public vararg val ids: Int) {
+    SUBVALUED(1),
+    BLOCK_STACK(2),
+    FALLBACK(3),
+    VALUE(4, 10),
+    VARIABLE(12),
+    ;
+
+    public companion object {
+        private val TYPES = arrayOfNulls<ScratchInputTypes>(
+            ScratchInputTypes.values().flatMap { it.ids.toList() }.max() + 1
+        )
+
+        init {
+            ScratchInputTypes.values().forEach {
+                it.ids.forEach { id -> TYPES[id] = it }
+            }
+        }
+
+        @JvmStatic
+        public fun fromId(id: Int): ScratchInputTypes =
+            TYPES.getOrNull(id) ?: throw IllegalArgumentException("Unknown input type $id")
+    }
+}
+
+public sealed interface ScratchInput<T> {
+    public val type: ScratchInputTypes
+    public val value: T
+
+    public companion object {
+        public fun parse(
+            data: JsonElement,
+            blocks: Map<String, ScratchBlock>,
+            variables: Map<String, ScratchVariable>
+        ): ScratchInput<*> = if (data.isJsonArray) {
+            data as JsonArray
+            when (ScratchInputTypes.fromId(data[0].asInt)) {
+                ScratchInputTypes.SUBVALUED -> parse(data[1], blocks, variables)
+                ScratchInputTypes.BLOCK_STACK -> BlockStackInput(blocks.getValue(data[1].asString))
+                ScratchInputTypes.FALLBACK -> FallbackInput(
+                    parse(data[1], blocks, variables),
+                    parse(data[2], blocks, variables)
+                )
+                ScratchInputTypes.VALUE -> ValueInput(data[1].asString)
+                ScratchInputTypes.VARIABLE -> VariableInput(variables.getValue(data[2].asString))
+            }
+        } else {
+            ReferenceInput(blocks.getValue(data.asString))
+        }
+    }
+}
+
+public data class ReferenceInput(override val value: ScratchBlock) : ScratchInput<ScratchBlock> {
+    override val type: ScratchInputTypes get() = ScratchInputTypes.SUBVALUED
+}
+
+public data class BlockStackInput(override val value: ScratchBlock) : ScratchInput<ScratchBlock> {
+    override val type: ScratchInputTypes get() = ScratchInputTypes.BLOCK_STACK
+}
+
+public data class FallbackInput<A, B>(
+    public val primary: ScratchInput<A>,
+    public val secondary: ScratchInput<B>
+) : ScratchInput<Pair<ScratchInput<A>, ScratchInput<B>>> {
+    override val type: ScratchInputTypes get() = ScratchInputTypes.FALLBACK
+    override val value: Pair<ScratchInput<A>, ScratchInput<B>> = Pair(primary, secondary)
+}
+
+public data class ValueInput(override val value: String) : ScratchInput<String> {
+    override val type: ScratchInputTypes get() = ScratchInputTypes.VALUE
+}
+
+public data class VariableInput(override val value: ScratchVariable) : ScratchInput<ScratchVariable> {
+    override val type: ScratchInputTypes get() = ScratchInputTypes.VARIABLE
+}

@@ -1,8 +1,9 @@
 package io.github.gaming32.scratch2jvm.parser.data
 
 import com.google.gson.JsonObject
+import io.github.gaming32.scratch2jvm.parser.PrettyPrintable
 
-public class ScratchProject(root: JsonObject) {
+public class ScratchProject(root: JsonObject) : PrettyPrintable {
     public val meta: Map<String, String> = root.getAsJsonObject("meta")
         .asMap()
         .entries

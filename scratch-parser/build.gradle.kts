@@ -19,7 +19,10 @@ kotlin {
 dependencies {
     implementation("com.google.code.gson:gson:2.10")
 
+    compileOnly("org.jetbrains:annotations:23.0.0")
+
     implementation(kotlin("stdlib-jdk8"))
+    implementation("org.jetbrains.kotlin:kotlin-reflect:1.7.20")
 }
 
 tasks.withType<KotlinCompile> {

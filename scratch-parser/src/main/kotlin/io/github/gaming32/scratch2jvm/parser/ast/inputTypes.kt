@@ -2,7 +2,9 @@ package io.github.gaming32.scratch2jvm.parser.ast
 
 import com.google.gson.JsonArray
 import com.google.gson.JsonElement
+import io.github.gaming32.scratch2jvm.parser.PrettyPrintable
 import io.github.gaming32.scratch2jvm.parser.data.ScratchVariable
+import kotlin.reflect.KProperty1
 
 public enum class ScratchInputTypes(public vararg val ids: Int) {
     SUBVALUED(1),
@@ -29,7 +31,7 @@ public enum class ScratchInputTypes(public vararg val ids: Int) {
     }
 }
 
-public sealed interface ScratchInput<T> {
+public sealed interface ScratchInput<T> : PrettyPrintable {
     public val type: ScratchInputTypes
     public val value: T
 
@@ -70,6 +72,7 @@ public data class FallbackInput<A, B>(
 ) : ScratchInput<Pair<ScratchInput<A>, ScratchInput<B>>> {
     override val type: ScratchInputTypes get() = ScratchInputTypes.FALLBACK
     override val value: Pair<ScratchInput<A>, ScratchInput<B>> = Pair(primary, secondary)
+    override val prettyPrintBlacklistedProperties: Set<KProperty1<*, *>> = setOf(FallbackInput<*, *>::value)
 }
 
 public data class ValueInput(override val value: String) : ScratchInput<String> {

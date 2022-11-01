@@ -1,6 +1,7 @@
 package io.github.gaming32.scratch2jvm.parser.data
 
 import com.google.gson.JsonObject
+import io.github.gaming32.scratch2jvm.parser.PrettyPrintable
 
 public data class ScratchMonitor(
     public val id: String,
@@ -9,7 +10,7 @@ public data class ScratchMonitor(
     public val x: Int = 0, public val y: Int,
     public val visible: Boolean = true,
     public val sliderMin: Int = 0, public val sliderMax: Int = 100
-) {
+) : PrettyPrintable {
     public enum class MonitorMode {
         DEFAULT, LARGE, SLIDER, LIST
     }

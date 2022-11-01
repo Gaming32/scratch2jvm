@@ -1,13 +1,15 @@
 package io.github.gaming32.scratch2jvm.parser.ast
 
 import com.google.gson.JsonObject
+import io.github.gaming32.scratch2jvm.parser.PrettyPrintable
+import kotlin.reflect.KProperty1
 
 public class ScratchBlock(
     public val id: String,
     public val opcode: ScratchOpcodes,
     public val topLevel: Boolean = false,
     public val x: Int = 0, public val y: Int = 0
-) {
+) : PrettyPrintable {
     internal companion object {
         @JvmStatic
         fun fromJson(id: String, data: JsonObject): ScratchBlock = ScratchBlock(
@@ -18,6 +20,14 @@ public class ScratchBlock(
             y = data["y"]?.asInt ?: 0
         )
     }
+
+    public override val prettyPrintWhitelistedProperties: Set<KProperty1<*, *>> = setOf(
+        ScratchBlock::inputs
+    )
+    public override val prettyPrintBlacklistedProperties: Set<KProperty1<*, *>> = setOf(
+        ScratchBlock::parent,
+        ScratchBlock::inputsMutable,
+    )
 
     public var next: ScratchBlock? = null
         internal set

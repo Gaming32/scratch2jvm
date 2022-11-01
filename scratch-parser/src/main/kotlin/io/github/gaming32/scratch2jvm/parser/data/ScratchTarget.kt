@@ -1,6 +1,7 @@
 package io.github.gaming32.scratch2jvm.parser.data
 
 import com.google.gson.JsonObject
+import io.github.gaming32.scratch2jvm.parser.PrettyPrintable
 import io.github.gaming32.scratch2jvm.parser.ast.ScratchBlock
 import io.github.gaming32.scratch2jvm.parser.ast.ScratchInput
 
@@ -11,7 +12,7 @@ public data class ScratchTarget(
     public val lists: Map<String, ScratchList> = mapOf(),
     public val rootBlocks: Map<String, ScratchBlock>,
     public val currentCostume: Int = 0
-) {
+) : PrettyPrintable {
     public companion object {
         @JvmStatic
         public fun fromJson(data: JsonObject, stageVariables: Map<String, ScratchVariable>): ScratchTarget {

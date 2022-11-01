@@ -7,7 +7,7 @@ import java.io.IOException
 import java.io.InputStreamReader
 import java.util.zip.ZipFile
 
-public class ScratchProjectFile(private val scratchZip: ZipFile) {
+public class ScratchProjectFile(public val scratchZip: ZipFile) : AutoCloseable {
     public companion object {
         @Throws(IOException::class)
         @JvmStatic
@@ -31,4 +31,6 @@ public class ScratchProjectFile(private val scratchZip: ZipFile) {
             )
         ).asJsonObject
     )
+
+    override fun close(): Unit = scratchZip.close()
 }

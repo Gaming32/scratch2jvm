@@ -10,6 +10,9 @@ version = "1.0-SNAPSHOT"
 
 repositories {
     mavenCentral()
+    maven {
+        url = uri("https://jitpack.io")
+    }
 }
 
 kotlin {
@@ -17,12 +20,13 @@ kotlin {
 }
 
 dependencies {
-    implementation("com.google.code.gson:gson:2.10")
+    implementation(project(":scratch-parser"))
 
-    compileOnly("org.jetbrains:annotations:23.0.0")
+    implementation("com.github.char:Koffee:3a78d8a437")
 
-    implementation(kotlin("stdlib-jdk8"))
-    implementation("org.jetbrains.kotlin:kotlin-reflect:1.7.20")
+    implementation("org.ow2.asm:asm:9.4")
+    implementation("org.ow2.asm:asm-tree:9.4")
+    testImplementation("org.ow2.asm:asm-util:9.4")
 }
 
 tasks.withType<KotlinCompile> {

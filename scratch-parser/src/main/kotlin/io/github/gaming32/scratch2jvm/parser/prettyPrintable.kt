@@ -1,7 +1,7 @@
 package io.github.gaming32.scratch2jvm.parser
 
 import kotlin.reflect.KProperty1
-import kotlin.reflect.full.declaredMemberProperties
+import kotlin.reflect.full.memberProperties
 import kotlin.reflect.jvm.javaField
 
 public interface PrettyPrintable {
@@ -11,7 +11,7 @@ public interface PrettyPrintable {
     public fun print(out: StringBuilder, currentIndent: String, indent: String): Unit = with(out) {
         append(this@PrettyPrintable.javaClass.simpleName)
         append('(')
-        val props = this@PrettyPrintable::class.declaredMemberProperties.filter {
+        val props = this@PrettyPrintable::class.memberProperties.filter {
             if (it.name == "prettyPrintWhitelistedProperties") return@filter false
             if (it.name == "prettyPrintBlacklistedProperties") return@filter false
             it in prettyPrintWhitelistedProperties ||
@@ -30,7 +30,6 @@ public interface PrettyPrintable {
                 @Suppress("UNCHECKED_CAST")
                 val value = (prop as KProperty1<in PrettyPrintable, *>).get(this@PrettyPrintable)
                 value.prettyPrint(indent, newIndent, out)
-
             }
             append('\n')
             append(currentIndent)

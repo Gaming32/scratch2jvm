@@ -2,6 +2,7 @@ package io.github.gaming32.scratch2jvm.parser.data
 
 import com.google.gson.JsonObject
 import io.github.gaming32.scratch2jvm.parser.PrettyPrintable
+import kotlin.reflect.KProperty1
 
 public class ScratchProject(root: JsonObject) : PrettyPrintable {
     public val meta: Map<String, String> = root.getAsJsonObject("meta")
@@ -28,4 +29,8 @@ public class ScratchProject(root: JsonObject) : PrettyPrintable {
     }
 
     public val stage: ScratchTarget = targets.values.first { it.isStage }
+
+    override val prettyPrintBlacklistedProperties: Set<KProperty1<*, *>> = setOf(
+        ScratchProject::stage
+    )
 }

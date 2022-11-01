@@ -21,6 +21,7 @@ kotlin {
 
 dependencies {
     implementation(project(":scratch-parser"))
+    implementation(project(":scratch-runtime"))
 
     implementation("com.github.char:Koffee:3a78d8a437")
 

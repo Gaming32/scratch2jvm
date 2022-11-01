@@ -19,7 +19,14 @@ public class ScratchCompiler private constructor(
     private val project: ScratchProject
 ) {
     public companion object {
-        private const val RUNTIME_PACKAGE = "io/github/gaming32/scratch2jvm/runtime"
+        public const val RUNTIME_PACKAGE: String = "io/github/gaming32/scratch2jvm/runtime"
+        public const val SCRATCH_ABI: String = "$RUNTIME_PACKAGE/ScratchABI"
+        public const val TARGET_BASE: String = "$RUNTIME_PACKAGE/Target"
+        public const val STAGE_BASE: String = "$RUNTIME_PACKAGE/Stage"
+        public const val SPRITE_BASE: String = "$RUNTIME_PACKAGE/Sprite"
+        public val USED_RUNTIME_CLASSES: List<String> = listOf(
+            SCRATCH_ABI, TARGET_BASE, STAGE_BASE, SPRITE_BASE
+        )
 
         @JvmStatic
         public fun compile(projectName: String, project: ScratchProject): Pair<List<ClassNode>, String> = Pair(
@@ -31,7 +38,7 @@ public class ScratchCompiler private constructor(
     private fun compile() = buildList {
         for (target in project.targets.values) {
             val className = escapePackageName("scratch", projectName, "target", target.name)
-            val superName = if (target.isStage) "$RUNTIME_PACKAGE/Stage" else "$RUNTIME_PACKAGE/Sprite"
+            val superName = if (target.isStage) STAGE_BASE else SPRITE_BASE
             add(assembleClass(public + final, className, superName = superName) {
                 field(public + static + final, "INSTANCE", className)
                 clinit {
@@ -72,40 +79,40 @@ public class ScratchCompiler private constructor(
                     }
                     aload_0
                     iconst(target.currentCostume)
-                    putfield("$RUNTIME_PACKAGE/Target", "costume", int)
+                    putfield(TARGET_BASE, "costume", int)
                     aload_0
                     dconst(target.volume)
-                    putfield("$RUNTIME_PACKAGE/Target", "volume", double)
+                    putfield(TARGET_BASE, "volume", double)
                     aload_0
                     iconst(target.layerOrder)
-                    putfield("$RUNTIME_PACKAGE/Target", "layerOrder", int)
+                    putfield(TARGET_BASE, "layerOrder", int)
                     if (target.isStage) {
                         aload_0
                         dconst(target.tempo)
-                        putfield("$RUNTIME_PACKAGE/Stage", "tempo", double)
+                        putfield(STAGE_BASE, "tempo", double)
                     } else {
                         aload_0
                         dconst(target.x)
-                        putfield("$RUNTIME_PACKAGE/Sprite", "x", double)
+                        putfield(SPRITE_BASE, "x", double)
                         aload_0
                         dconst(target.y)
-                        putfield("$RUNTIME_PACKAGE/Sprite", "y", double)
+                        putfield(SPRITE_BASE, "y", double)
                         aload_0
                         dconst(target.size)
-                        putfield("$RUNTIME_PACKAGE/Sprite", "size", double)
+                        putfield(SPRITE_BASE, "size", double)
                         aload_0
                         dconst(target.direction)
-                        putfield("$RUNTIME_PACKAGE/Sprite", "direction", double)
+                        putfield(SPRITE_BASE, "direction", double)
                         aload_0
                         if (target.draggable) {
                             iconst_1
                         } else {
                             iconst_0
                         }
-                        putfield("$RUNTIME_PACKAGE/Sprite", "draggable", boolean)
+                        putfield(SPRITE_BASE, "draggable", boolean)
                         aload_0
                         iconst(target.rotationStyle.toInt())
-                        putfield("$RUNTIME_PACKAGE/Sprite", "rotationStyle", byte)
+                        putfield(SPRITE_BASE, "rotationStyle", byte)
                     }
                     _return
                 }
@@ -133,40 +140,40 @@ public class ScratchCompiler private constructor(
                         }
                         aload_0
                         aload_1
-                        getfield("$RUNTIME_PACKAGE/Target", "costume", int)
-                        putfield("$RUNTIME_PACKAGE/Target", "costume", int)
+                        getfield(TARGET_BASE, "costume", int)
+                        putfield(TARGET_BASE, "costume", int)
                         aload_0
                         aload_1
-                        getfield("$RUNTIME_PACKAGE/Target", "volume", double)
-                        putfield("$RUNTIME_PACKAGE/Target", "volume", double)
+                        getfield(TARGET_BASE, "volume", double)
+                        putfield(TARGET_BASE, "volume", double)
                         aload_0
                         aload_1
-                        getfield("$RUNTIME_PACKAGE/Target", "layerOrder", int)
-                        putfield("$RUNTIME_PACKAGE/Target", "layerOrder", int)
+                        getfield(TARGET_BASE, "layerOrder", int)
+                        putfield(TARGET_BASE, "layerOrder", int)
                         aload_0
                         aload_1
-                        getfield("$RUNTIME_PACKAGE/Sprite", "x", double)
-                        putfield("$RUNTIME_PACKAGE/Sprite", "x", double)
+                        getfield(SPRITE_BASE, "x", double)
+                        putfield(SPRITE_BASE, "x", double)
                         aload_0
                         aload_1
-                        getfield("$RUNTIME_PACKAGE/Sprite", "y", double)
-                        putfield("$RUNTIME_PACKAGE/Sprite", "y", double)
+                        getfield(SPRITE_BASE, "y", double)
+                        putfield(SPRITE_BASE, "y", double)
                         aload_0
                         aload_1
-                        getfield("$RUNTIME_PACKAGE/Sprite", "size", double)
-                        putfield("$RUNTIME_PACKAGE/Sprite", "size", double)
+                        getfield(SPRITE_BASE, "size", double)
+                        putfield(SPRITE_BASE, "size", double)
                         aload_0
                         aload_1
-                        getfield("$RUNTIME_PACKAGE/Sprite", "direction", double)
-                        putfield("$RUNTIME_PACKAGE/Sprite", "direction", double)
+                        getfield(SPRITE_BASE, "direction", double)
+                        putfield(SPRITE_BASE, "direction", double)
                         aload_0
                         aload_1
-                        getfield("$RUNTIME_PACKAGE/Sprite", "draggable", boolean)
-                        putfield("$RUNTIME_PACKAGE/Sprite", "draggable", boolean)
+                        getfield(SPRITE_BASE, "draggable", boolean)
+                        putfield(SPRITE_BASE, "draggable", boolean)
                         aload_0
                         aload_1
-                        getfield("$RUNTIME_PACKAGE/Sprite", "rotationStyle", byte)
-                        putfield("$RUNTIME_PACKAGE/Sprite", "rotationStyle", byte)
+                        getfield(SPRITE_BASE, "rotationStyle", byte)
+                        putfield(SPRITE_BASE, "rotationStyle", byte)
                         _return
                     }
                 }
@@ -223,7 +230,7 @@ public class ScratchCompiler private constructor(
             ScratchOpcodes.EVENT_WHENFLAGCLICKED -> {}
             ScratchOpcodes.LOOKS_SAY -> {
                 compileInput(stage, target, block.inputs.getValue("MESSAGE"))
-                invokestatic("$RUNTIME_PACKAGE/ScratchABI", "say", void, String::class)
+                invokestatic(SCRATCH_ABI, "say", void, String::class)
             }
             else -> throw IllegalArgumentException("Don't know how to compile block ${block.opcode} yet")
         }

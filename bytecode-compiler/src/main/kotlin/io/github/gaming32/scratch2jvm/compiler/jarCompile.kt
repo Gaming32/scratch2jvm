@@ -1,6 +1,7 @@
 package io.github.gaming32.scratch2jvm.compiler
 
 import io.github.gaming32.scratch2jvm.parser.ScratchProjectFile
+import io.github.gaming32.scratch2jvm.runtime.ScratchABI
 import org.objectweb.asm.ClassWriter
 import java.io.File
 import java.net.URI
@@ -36,6 +37,13 @@ public fun compileToJar(inFile: File, outFile: File) {
             outJar.getPath("META-INF/MANIFEST.MF").writer(Charsets.UTF_8).use {
                 it.write("Manifest-Version: 1.0\n")
                 it.write("Main-Class: ${mainClassName.replace('/', '.')}\n")
+            }
+            for (className in ScratchCompiler.USED_RUNTIME_CLASSES) {
+                ScratchABI::class.java.getResourceAsStream("/$className.class")?.use {
+                    val destPath = outJar.getPath("$className.class")
+                    destPath.parent.createDirectories()
+                    Files.copy(it, destPath, StandardCopyOption.REPLACE_EXISTING)
+                } ?: throw IllegalArgumentException("Missing runtime class $className")
             }
         }
     }

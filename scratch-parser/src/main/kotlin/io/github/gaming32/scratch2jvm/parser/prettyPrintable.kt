@@ -53,6 +53,40 @@ public fun Any?.prettyPrint(
             out.append(this)
             out.append('"')
         }
+        is Collection<*> -> {
+            out.append('[')
+            if (isNotEmpty()) {
+                val newIndent = currentIndent + indent
+                forEachIndexed { i, value ->
+                    if (i > 0) {
+                        out.append(',')
+                    }
+                    out.append('\n')
+                    out.append(newIndent)
+                    value.prettyPrint(indent, newIndent, out)
+                }
+                out.append('\n')
+                out.append(currentIndent)
+            }
+            out.append(']')
+        }
+        is Array<*> -> {
+            out.append('[')
+            if (isNotEmpty()) {
+                val newIndent = currentIndent + indent
+                forEachIndexed { i, value ->
+                    if (i > 0) {
+                        out.append(',')
+                    }
+                    out.append('\n')
+                    out.append(newIndent)
+                    value.prettyPrint(indent, newIndent, out)
+                }
+                out.append('\n')
+                out.append(currentIndent)
+            }
+            out.append(']')
+        }
         is Map<*, *> -> {
             out.append('{')
             if (isNotEmpty()) {
@@ -63,9 +97,8 @@ public fun Any?.prettyPrint(
                     }
                     out.append('\n')
                     out.append(newIndent)
-                    out.append('"')
-                    out.append(key)
-                    out.append("\" = ")
+                    key.prettyPrint(indent, newIndent, out)
+                    out.append(" = ")
                     value.prettyPrint(indent, newIndent, out)
                 }
                 out.append('\n')

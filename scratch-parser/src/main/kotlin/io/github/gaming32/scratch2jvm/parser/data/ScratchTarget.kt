@@ -10,10 +10,24 @@ public data class ScratchTarget(
     public val isStage: Boolean = false,
     public val variables: Map<String, ScratchVariable> = mapOf(),
     public val lists: Map<String, ScratchList> = mapOf(),
-    public val rootBlocks: Map<String, ScratchBlock>,
-    public val currentCostume: Int = 0
+    public val rootBlocks: Map<String, ScratchBlock> = mapOf(),
+    public val currentCostume: Int = 0,
+    public val volume: Double = 100.0,
+    public val layerOrder: Int = 0,
+    public val tempo: Double = 60.0,
+    public val x: Double = 0.0,
+    public val y: Double = 0.0,
+    public val size: Double = 100.0,
+    public val direction: Double = 90.0,
+    public val draggable: Boolean = false,
+    public val rotationStyle: Byte = ROTATION_ALL_AROUND,
 ) : PrettyPrintable {
     public companion object {
+        public const val ROTATION_LEFT_RIGHT: Byte = 0
+        public const val ROTATION_DONT_ROTATE: Byte = 1
+        public const val ROTATION_ALL_AROUND: Byte = 2
+        public val ROTATION_NAMES: List<String> = listOf("left-right", "don't rotate", "all around")
+
         @JvmStatic
         public fun fromJson(data: JsonObject, stageVariables: Map<String, ScratchVariable>): ScratchTarget {
             val variables = data["variables"]
@@ -47,13 +61,7 @@ public data class ScratchTarget(
             return ScratchTarget(
                 name = data["name"].asString,
                 isStage = data["isStage"].asBoolean,
-                variables = data["variables"]
-                    .asJsonObject
-                    .asMap()
-                    .entries
-                    .associate { (id, variable) ->
-                        id to ScratchVariable.fromJson(id, variable.asJsonArray)
-                    },
+                variables = variables,
                 lists = data["lists"]
                     .asJsonObject
                     .asMap()
@@ -62,7 +70,16 @@ public data class ScratchTarget(
                         id to ScratchList.fromJson(id, variable.asJsonArray)
                     },
                 rootBlocks = rootBlocks.filter { it.value.topLevel },
-                currentCostume = data["currentCostume"].asInt
+                currentCostume = data["currentCostume"].asInt,
+                volume = data["volume"].asDouble,
+                layerOrder = data["layerOrder"].asInt,
+                tempo = data["tempo"]?.asDouble ?: 0.0,
+                x = data["x"]?.asDouble ?: 0.0,
+                y = data["y"]?.asDouble ?: 0.0,
+                size = data["size"]?.asDouble ?: 100.0,
+                direction = data["direction"]?.asDouble ?: 90.0,
+                draggable = data["draggable"]?.asBoolean ?: false,
+                rotationStyle = ROTATION_NAMES.indexOf(data["rotationStyle"]?.asString).toByte(),
             )
         }
     }

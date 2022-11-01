@@ -3,6 +3,8 @@ package io.github.gaming32.scratch2jvm.parser.ast
 public enum class ScratchOpcodes(public val id: String) {
     MOTION_SETX("motion_setx"),
 
+    LOOKS_SAY("looks_say"),
+
     EVENT_WHENFLAGCLICKED("event_whenflagclicked"),
 
     CONTROL_FOREVER("control_forever"),
@@ -32,6 +34,10 @@ public enum class ScratchOpcodes(public val id: String) {
 
 public object MotionOpcodes {
     public val SET_X: ScratchOpcodes = ScratchOpcodes.MOTION_SETX
+}
+
+public object LooksOpcodes {
+    public val SAY: ScratchOpcodes = ScratchOpcodes.LOOKS_SAY
 }
 
 public object EventsOpcodes {

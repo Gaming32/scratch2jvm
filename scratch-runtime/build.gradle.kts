@@ -11,3 +11,7 @@ repositories {
 
 dependencies {
 }
+
+tasks.withType<JavaCompile> {
+    options.compilerArgs.add("-Xlint:-unused")
+}

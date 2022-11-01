@@ -13,3 +13,12 @@ public fun InstructionAssembly.iconst(value: Int): Unit = when (value) {
     in Short.MIN_VALUE..Short.MAX_VALUE -> sipush(value)
     else -> ldc(value)
 }
+
+public fun InstructionAssembly.dconst(value: Double) {
+    val bits = value.toBits()
+    if (bits == 0L || bits == 0x3FF0000000000000L) { // +0.0d and 1.0d
+        instructions.add(InsnNode(Opcodes.DCONST_0 + value.toInt()))
+    } else {
+        ldc(value)
+    }
+}

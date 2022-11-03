@@ -303,6 +303,7 @@ public class ScratchCompiler private constructor(
         target: ScratchTarget,
         input: ScratchInput<*>
     ): Unit = when (input.type) {
+        ScratchInputTypes.SUBVALUED -> compileBlock(stage, target, (input as ReferenceInput).value)
         ScratchInputTypes.FALLBACK -> compileInput(stage, target, (input as FallbackInput<*, *>).primary)
         ScratchInputTypes.VALUE -> ldc((input as ValueInput).value)
         ScratchInputTypes.VARIABLE -> {
@@ -325,11 +326,37 @@ public class ScratchCompiler private constructor(
 
     private tailrec fun MethodAssembly.compileBlock(stage: ScratchTarget, target: ScratchTarget, block: ScratchBlock) {
         when (block.opcode) {
-            ScratchOpcodes.EVENT_WHENFLAGCLICKED -> {}
             ScratchOpcodes.LOOKS_SAY -> {
                 aload_0
                 compileInput(stage, target, block.inputs.getValue("MESSAGE"))
                 invokestatic(SCRATCH_ABI, "say", void, TARGET_BASE, String::class)
+            }
+            ScratchOpcodes.EVENT_WHENFLAGCLICKED -> {}
+            ScratchOpcodes.OPERATOR_JOIN -> {
+                compileInput(stage, target, block.inputs.getValue("STRING1"))
+                compileInput(stage, target, block.inputs.getValue("STRING2"))
+                invokevirtual(String::class, "concat", String::class, String::class)
+            }
+            ScratchOpcodes.DATA_SETVARIABLETO -> {
+                val variable = block.fields.getValue("VARIABLE")
+                val isLocal = variable.name in target.variables
+                var stageName = ""
+                if (isLocal) {
+                    aload_0
+                } else {
+                    stageName = escapePackageName("scratch", projectName, "target", stage.name)
+                    getstatic(stageName, "INSTANCE", stageName)
+                }
+                compileInput(stage, target, block.inputs.getValue("VALUE"))
+                if (isLocal) {
+                    putfield(
+                        escapePackageName("scratch", projectName, "target", target.name),
+                        escapeUnqualifiedName(variable.name),
+                        String::class
+                    )
+                } else {
+                    putfield(stageName, escapeUnqualifiedName(variable.name), String::class)
+                }
             }
             else -> throw IllegalArgumentException("Don't know how to compile block ${block.opcode} yet")
         }

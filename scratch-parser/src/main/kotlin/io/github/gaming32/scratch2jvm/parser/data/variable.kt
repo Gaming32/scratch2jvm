@@ -6,7 +6,7 @@ import io.github.gaming32.scratch2jvm.parser.PrettyPrintable
 public data class ScratchVariable(
     public val id: String,
     public val name: String,
-    public val value: String
+    public val value: String = ""
 ) : PrettyPrintable {
     public companion object {
         @JvmStatic
@@ -21,7 +21,7 @@ public data class ScratchVariable(
 public data class ScratchList(
     public val id: String,
     public val name: String,
-    public val value: List<String>
+    public val value: List<String> = listOf()
 ) : PrettyPrintable {
     public companion object {
         @JvmStatic

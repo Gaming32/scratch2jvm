@@ -1,14 +1,17 @@
 package io.github.gaming32.scratch2jvm.parser.ast
 
+import com.google.gson.JsonArray
 import com.google.gson.JsonObject
 import io.github.gaming32.scratch2jvm.parser.PrettyPrintable
+import io.github.gaming32.scratch2jvm.parser.data.ScratchVariable
 import kotlin.reflect.KProperty1
 
 public class ScratchBlock(
     public val id: String,
     public val opcode: ScratchOpcodes,
     public val topLevel: Boolean = false,
-    public val x: Int = 0, public val y: Int = 0
+    public val x: Int = 0, public val y: Int = 0,
+    public val fields: Map<String, ScratchVariable> = mapOf()
 ) : PrettyPrintable {
     internal companion object {
         @JvmStatic
@@ -17,7 +20,15 @@ public class ScratchBlock(
             opcode = ScratchOpcodes.fromId(data["opcode"].asString),
             topLevel = data["topLevel"].asBoolean,
             x = data["x"]?.asInt ?: 0,
-            y = data["y"]?.asInt ?: 0
+            y = data["y"]?.asInt ?: 0,
+            fields = data["fields"]
+                .asJsonObject
+                .asMap()
+                .entries
+                .associate { (key, value) ->
+                    value as JsonArray
+                    key to ScratchVariable(value[1].asString, value[0].asString)
+                }
         )
     }
 

@@ -13,7 +13,9 @@ public enum class ScratchOpcodes(public val id: String) {
     OPERATOR_SUBTRACT("operator_subtract"),
     OPERATOR_DIVIDE("operator_divide"),
     OPERATOR_GT("operator_gt"),
+    OPERATOR_JOIN("operator_join"),
 
+    DATA_SETVARIABLETO("data_setvariableto"),
     DATA_CHANGEVARIABLEBY("data_changevariableby"),
 
     PROCEDURES_DEFINITION("procedures_definition"),
@@ -53,9 +55,11 @@ public object OperatorsOpcodes {
     public val SUBTRACT: ScratchOpcodes = ScratchOpcodes.OPERATOR_SUBTRACT
     public val DIVIDE: ScratchOpcodes = ScratchOpcodes.OPERATOR_DIVIDE
     public val GT: ScratchOpcodes = ScratchOpcodes.OPERATOR_GT
+    public val JOIN: ScratchOpcodes = ScratchOpcodes.OPERATOR_JOIN
 }
 
 public object VariablesOpcodes {
+    public val SET_VARIABLE_TO: ScratchOpcodes = ScratchOpcodes.DATA_SETVARIABLETO
     public val CHANGE_VARIABLE_BY: ScratchOpcodes = ScratchOpcodes.DATA_CHANGEVARIABLEBY
 }
 

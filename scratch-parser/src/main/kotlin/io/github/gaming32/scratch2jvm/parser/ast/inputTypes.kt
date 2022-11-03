@@ -3,6 +3,7 @@ package io.github.gaming32.scratch2jvm.parser.ast
 import com.google.gson.JsonArray
 import com.google.gson.JsonElement
 import io.github.gaming32.scratch2jvm.parser.PrettyPrintable
+import io.github.gaming32.scratch2jvm.parser.data.ScratchList
 import io.github.gaming32.scratch2jvm.parser.data.ScratchVariable
 import kotlin.reflect.KProperty1
 
@@ -12,6 +13,7 @@ public enum class ScratchInputTypes(public vararg val ids: Int) {
     FALLBACK(3),
     VALUE(4, 6, 10),
     VARIABLE(12),
+    LIST(13),
     ;
 
     public companion object {
@@ -39,18 +41,20 @@ public sealed interface ScratchInput<T> : PrettyPrintable {
         public fun parse(
             data: JsonElement,
             blocks: Map<String, ScratchBlock>,
-            variables: Map<String, ScratchVariable>
+            variables: Map<String, ScratchVariable>,
+            lists: Map<String, ScratchList>
         ): ScratchInput<*> = if (data.isJsonArray) {
             data as JsonArray
             when (ScratchInputTypes.fromId(data[0].asInt)) {
-                ScratchInputTypes.SUBVALUED -> parse(data[1], blocks, variables)
+                ScratchInputTypes.SUBVALUED -> parse(data[1], blocks, variables, lists)
                 ScratchInputTypes.BLOCK_STACK -> BlockStackInput(blocks.getValue(data[1].asString))
                 ScratchInputTypes.FALLBACK -> FallbackInput(
-                    parse(data[1], blocks, variables),
-                    parse(data[2], blocks, variables)
+                    parse(data[1], blocks, variables, lists),
+                    parse(data[2], blocks, variables, lists)
                 )
                 ScratchInputTypes.VALUE -> ValueInput(data[1].asString)
                 ScratchInputTypes.VARIABLE -> VariableInput(variables.getValue(data[2].asString))
+                ScratchInputTypes.LIST -> ListInput(lists.getValue(data[2].asString))
             }
         } else {
             ReferenceInput(blocks.getValue(data.asString))
@@ -81,4 +85,8 @@ public data class ValueInput(override val value: String) : ScratchInput<String> 
 
 public data class VariableInput(override val value: ScratchVariable) : ScratchInput<ScratchVariable> {
     override val type: ScratchInputTypes get() = ScratchInputTypes.VARIABLE
+}
+
+public data class ListInput(override val value: ScratchList) : ScratchInput<ScratchList> {
+    override val type: ScratchInputTypes get() = ScratchInputTypes.LIST
 }

@@ -10,6 +10,7 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.StringJoiner;
 
 @SuppressWarnings("unused")
 public final class ScratchABI {
@@ -76,6 +77,27 @@ public final class ScratchABI {
             return "";
         }
         return String.valueOf(s.charAt((int)letter - 1));
+    }
+
+    public static String listToString(List<String> list) {
+        String sep = "";
+        for (final String value : list) {
+            if (value.length() != 1) {
+                sep = " ";
+                break;
+            }
+        }
+        final StringJoiner result = new StringJoiner(sep);
+        list.forEach(result::add);
+        return result.toString();
+    }
+
+    public static String doubleToString(double d) {
+        final long l = (long)d;
+        if (l == d) {
+            return Long.toString(l);
+        }
+        return Double.toString(d);
     }
 
     private static void onlyImplementedInConsole(String opcode) {

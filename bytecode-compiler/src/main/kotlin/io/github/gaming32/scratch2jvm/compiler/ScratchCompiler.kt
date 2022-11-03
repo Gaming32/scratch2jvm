@@ -13,6 +13,7 @@ import codes.som.koffee.types.TypeLike
 import io.github.gaming32.scratch2jvm.parser.ast.*
 import io.github.gaming32.scratch2jvm.parser.data.ScratchProject
 import io.github.gaming32.scratch2jvm.parser.data.ScratchTarget
+import io.github.gaming32.scratch2jvm.parser.data.ScratchVariable
 import io.github.gaming32.scratch2jvm.parser.prettyPrint
 import org.objectweb.asm.Type
 import java.lang.invoke.*
@@ -343,27 +344,71 @@ public class ScratchCompiler private constructor(
         )
     }
 
-    private tailrec fun MethodAssembly.compileInput(input: ScratchInput<*>): Unit = when (input.type) {
-        ScratchInputTypes.SUBVALUED -> compileBlock((input as ReferenceInput).value)
-        ScratchInputTypes.FALLBACK -> compileInput((input as FallbackInput<*, *>).primary)
-        ScratchInputTypes.VALUE -> ldc((input as ValueInput).value)
-        ScratchInputTypes.VARIABLE -> {
-            val variable = (input as VariableInput).value
-            if (variable.name in target.variables) {
-                aload_0
-                getfield(
-                    escapePackageName("scratch", projectName, "target", target.name),
-                    escapeUnqualifiedName(variable.name),
-                    String::class
-                )
-            } else {
-                val stageName = escapePackageName("scratch", projectName, "target", project.stage.name)
-                getstatic(stageName, "INSTANCE", stageName)
-                getfield(stageName, escapeUnqualifiedName(variable.name), String::class)
+    private tailrec fun MethodAssembly.compileInput(input: ScratchInput<*>, number: Boolean = false) {
+        when (input.type) {
+            ScratchInputTypes.SUBVALUED -> compileBlock((input as ReferenceInput).value)
+            ScratchInputTypes.FALLBACK -> return compileInput((input as FallbackInput<*, *>).primary, number)
+            ScratchInputTypes.VALUE -> {
+                val value = (input as ValueInput).value
+                if (number) {
+                    push_double(value.toDoubleOrNull() ?: 0.0)
+                } else {
+                    ldc(value)
+                }
+                return
             }
+            ScratchInputTypes.VARIABLE -> {
+                val variable = (input as VariableInput).value
+                if (variable.id in target.variables) {
+                    aload_0
+                    getfield(
+                        escapePackageName("scratch", projectName, "target", target.name),
+                        escapeUnqualifiedName(variable.name),
+                        String::class
+                    )
+                } else {
+                    val stageName = escapePackageName("scratch", projectName, "target", project.stage.name)
+                    getstatic(stageName, "INSTANCE", stageName)
+                    getfield(stageName, escapeUnqualifiedName(variable.name), String::class)
+                }
+            }
+            ScratchInputTypes.LIST -> {
+                val list = (input as ListInput).value
+                if (list.id in target.lists) {
+                    aload_0
+                    getfield(
+                        escapePackageName("scratch", projectName, "target", target.name),
+                        escapeUnqualifiedName(list.name),
+                        List::class
+                    )
+                } else {
+                    val stageName = escapePackageName("scratch", projectName, "target", project.stage.name)
+                    getstatic(stageName, "INSTANCE", stageName)
+                    getfield(stageName, escapeUnqualifiedName(list.name), List::class)
+                }
+                invokestatic(SCRATCH_ABI, "listToString", String::class, List::class)
+            }
+            ScratchInputTypes.BLOCK_STACK -> compileBlock((input as BlockStackInput).value)
+            else -> throw IllegalArgumentException("Don't know how to compile input ${input.type} yet")
         }
-        ScratchInputTypes.BLOCK_STACK -> compileBlock((input as BlockStackInput).value)
-        else -> throw IllegalArgumentException("Don't know how to compile input ${input.type} yet")
+        if (number) {
+            invokestatic(SCRATCH_ABI, "getNumber", double, String::class)
+        }
+    }
+
+    private fun MethodAssembly.getList(variable: ScratchVariable) {
+        if (variable.id in target.lists) {
+            aload_0
+            getfield(
+                escapePackageName("scratch", projectName, "target", target.name),
+                escapeUnqualifiedName(variable.name),
+                List::class
+            )
+        } else {
+            val stageName = escapePackageName("scratch", projectName, "target", project.stage.name)
+            getstatic(stageName, "INSTANCE", stageName)
+            getfield(stageName, escapeUnqualifiedName(variable.name), List::class)
+        }
     }
 
     private tailrec fun MethodAssembly.compileBlock(block: ScratchBlock) {
@@ -378,8 +423,7 @@ public class ScratchCompiler private constructor(
                 val countState = newState()
                 val indexState = newState()
                 setState(countState) {
-                    compileInput(block.inputs.getValue("TIMES"))
-                    invokestatic(SCRATCH_ABI, "getNumber", double, String::class)
+                    compileInput(block.inputs.getValue("TIMES"), true)
                 }
                 setState(indexState) {
                     dconst_0
@@ -422,10 +466,8 @@ public class ScratchCompiler private constructor(
             ScratchOpcodes.OPERATOR_MULTIPLY,
             ScratchOpcodes.OPERATOR_DIVIDE,
             ScratchOpcodes.OPERATOR_MOD -> {
-                compileInput(block.inputs.getValue("NUM1"))
-                invokestatic(SCRATCH_ABI, "getNumber", double, String::class)
-                compileInput(block.inputs.getValue("NUM2"))
-                invokestatic(SCRATCH_ABI, "getNumber", double, String::class)
+                compileInput(block.inputs.getValue("NUM1"), true)
+                compileInput(block.inputs.getValue("NUM2"), true)
                 when (block.opcode) {
                     ScratchOpcodes.OPERATOR_ADD -> dadd
                     ScratchOpcodes.OPERATOR_SUBTRACT -> dsub
@@ -434,15 +476,13 @@ public class ScratchCompiler private constructor(
                     ScratchOpcodes.OPERATOR_MOD -> invokestatic(SCRATCH_ABI, "mod", double, double, double)
                     else -> throw AssertionError()
                 }
-                invokestatic(Double::class.javaObjectType, "toString", String::class, double)
+                invokestatic(SCRATCH_ABI, "doubleToString", String::class, double)
             }
             ScratchOpcodes.OPERATOR_RANDOM -> {
-                compileInput(block.inputs.getValue("FROM"))
-                invokestatic(SCRATCH_ABI, "getNumber", double, String::class)
-                compileInput(block.inputs.getValue("TO"))
-                invokestatic(SCRATCH_ABI, "getNumber", double, String::class)
+                compileInput(block.inputs.getValue("FROM"), true)
+                compileInput(block.inputs.getValue("TO"), true)
                 invokestatic(SCRATCH_ABI, "random", double, double, double)
-                invokestatic(Double::class.javaObjectType, "toString", String::class, double)
+                invokestatic(SCRATCH_ABI, "doubleToString", String::class, double)
             }
             ScratchOpcodes.OPERATOR_JOIN -> {
                 compileInput(block.inputs.getValue("STRING1"))
@@ -451,8 +491,7 @@ public class ScratchCompiler private constructor(
             }
             ScratchOpcodes.OPERATOR_LETTER_OF -> {
                 compileInput(block.inputs.getValue("STRING"))
-                compileInput(block.inputs.getValue("LETTER"))
-                invokestatic(SCRATCH_ABI, "getNumber", double, String::class)
+                compileInput(block.inputs.getValue("LETTER"), true)
                 invokestatic(SCRATCH_ABI, "letterOf", String::class, String::class, double)
             }
             ScratchOpcodes.OPERATOR_LENGTH -> {
@@ -480,6 +519,50 @@ public class ScratchCompiler private constructor(
                 } else {
                     putfield(stageName, escapeUnqualifiedName(variable.name), String::class)
                 }
+            }
+            ScratchOpcodes.DATA_CHANGEVARIABLEBY -> {
+                val variable = block.fields.getValue("VARIABLE")
+                val isLocal = variable.name in target.variables
+                var stageName = ""
+                if (isLocal) {
+                    aload_0
+                } else {
+                    stageName = escapePackageName("scratch", projectName, "target", project.stage.name)
+                    getstatic(stageName, "INSTANCE", stageName)
+                }
+                dup
+                if (isLocal) {
+                    getfield(
+                        escapePackageName("scratch", projectName, "target", target.name),
+                        escapeUnqualifiedName(variable.name),
+                        String::class
+                    )
+                } else {
+                    getfield(stageName, escapeUnqualifiedName(variable.name), String::class)
+                }
+                invokestatic(SCRATCH_ABI, "getNumber", double, String::class)
+                compileInput(block.inputs.getValue("VALUE"), true)
+                dadd
+                invokestatic(SCRATCH_ABI, "doubleToString", String::class, double)
+                if (isLocal) {
+                    putfield(
+                        escapePackageName("scratch", projectName, "target", target.name),
+                        escapeUnqualifiedName(variable.name),
+                        String::class
+                    )
+                } else {
+                    putfield(stageName, escapeUnqualifiedName(variable.name), String::class)
+                }
+            }
+            ScratchOpcodes.DATA_ADDTOLIST -> {
+                getList(block.fields.getValue("LIST"))
+                compileInput(block.inputs.getValue("ITEM"))
+                invokeinterface(List::class, "add", boolean, Any::class)
+                pop
+            }
+            ScratchOpcodes.DATA_DELETEALLOFLIST -> {
+                getList(block.fields.getValue("LIST"))
+                invokeinterface(List::class, "clear", void)
             }
             else -> throw IllegalArgumentException("Don't know how to compile block ${block.opcode} yet")
         }

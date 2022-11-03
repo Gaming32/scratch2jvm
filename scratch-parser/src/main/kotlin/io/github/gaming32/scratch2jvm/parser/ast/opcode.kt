@@ -24,6 +24,8 @@ public enum class ScratchOpcodes(public val id: String) {
 
     DATA_SETVARIABLETO("data_setvariableto"),
     DATA_CHANGEVARIABLEBY("data_changevariableby"),
+    DATA_ADDTOLIST("data_addtolist"),
+    DATA_DELETEALLOFLIST("data_deletealloflist"),
 
     PROCEDURES_DEFINITION("procedures_definition"),
     PROCEDURES_PROTOTYPE("procedures_prototype"),
@@ -75,6 +77,8 @@ public object OperatorsOpcodes {
 public object VariablesOpcodes {
     public val SET_VARIABLE_TO: ScratchOpcodes = ScratchOpcodes.DATA_SETVARIABLETO
     public val CHANGE_VARIABLE_BY: ScratchOpcodes = ScratchOpcodes.DATA_CHANGEVARIABLEBY
+    public val ADD_TO_LIST: ScratchOpcodes = ScratchOpcodes.DATA_ADDTOLIST
+    public val DELETE_ALL_OF_LIST: ScratchOpcodes = ScratchOpcodes.DATA_DELETEALLOFLIST
 }
 
 public object MyBlocksOpcodes {

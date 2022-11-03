@@ -29,7 +29,11 @@ public data class ScratchTarget(
         public val ROTATION_NAMES: List<String> = listOf("left-right", "don't rotate", "all around")
 
         @JvmStatic
-        public fun fromJson(data: JsonObject, stageVariables: Map<String, ScratchVariable>): ScratchTarget {
+        public fun fromJson(
+            data: JsonObject,
+            stageVariables: Map<String, ScratchVariable>,
+            stageLists: Map<String, ScratchList>
+        ): ScratchTarget {
             val variables = data["variables"]
                 .asJsonObject
                 .asMap()
@@ -38,6 +42,14 @@ public data class ScratchTarget(
                     id to ScratchVariable.fromJson(id, variable.asJsonArray)
                 }
             val scopedVariables = stageVariables + variables
+            val lists = data["lists"]
+                .asJsonObject
+                .asMap()
+                .entries
+                .associate { (id, variable) ->
+                    id to ScratchList.fromJson(id, variable.asJsonArray)
+                }
+            val scopedLists = stageLists + lists
             val blocksData = data.getAsJsonObject("blocks")
             val rootBlocks = blocksData
                 .entrySet()
@@ -55,20 +67,14 @@ public data class ScratchTarget(
                     }
                 }
                 blockData["inputs"].asJsonObject.asMap().forEach { (name, value) ->
-                    block.inputsMutable[name] = ScratchInput.parse(value, rootBlocks, scopedVariables)
+                    block.inputsMutable[name] = ScratchInput.parse(value, rootBlocks, scopedVariables, scopedLists)
                 }
             }
             return ScratchTarget(
                 name = data["name"].asString,
                 isStage = data["isStage"].asBoolean,
                 variables = variables,
-                lists = data["lists"]
-                    .asJsonObject
-                    .asMap()
-                    .entries
-                    .associate { (id, variable) ->
-                        id to ScratchList.fromJson(id, variable.asJsonArray)
-                    },
+                lists = lists,
                 rootBlocks = rootBlocks.filter { it.value.topLevel },
                 currentCostume = data["currentCostume"].asInt,
                 volume = data["volume"].asDouble,

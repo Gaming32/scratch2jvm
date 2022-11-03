@@ -18,11 +18,11 @@ public class ScratchProject(root: JsonObject) : PrettyPrintable {
     public val targets: Map<String, ScratchTarget> = root.getAsJsonArray("targets").let { targetsData ->
         val result = mutableMapOf<String, ScratchTarget>()
         val stageData = targetsData.first { it.asJsonObject["isStage"].asBoolean }
-        val stage = ScratchTarget.fromJson(stageData.asJsonObject, mapOf())
+        val stage = ScratchTarget.fromJson(stageData.asJsonObject, mapOf(), mapOf())
         result[stage.name] = stage
         targetsData.forEach { targetData ->
             if (targetData === stageData) return@forEach
-            val target = ScratchTarget.fromJson(targetData.asJsonObject, stage.variables)
+            val target = ScratchTarget.fromJson(targetData.asJsonObject, stage.variables, stage.lists)
             result[target.name] = target
         }
         result

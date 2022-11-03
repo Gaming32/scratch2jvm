@@ -8,10 +8,13 @@ import codes.som.koffee.modifiers.final
 import codes.som.koffee.modifiers.public
 import codes.som.koffee.sugar.ClassAssemblyExtension.clinit
 import codes.som.koffee.sugar.ClassAssemblyExtension.init
+import codes.som.koffee.types.TypeLike
 import io.github.gaming32.scratch2jvm.parser.ast.*
 import io.github.gaming32.scratch2jvm.parser.data.ScratchProject
 import io.github.gaming32.scratch2jvm.parser.data.ScratchTarget
 import io.github.gaming32.scratch2jvm.parser.prettyPrint
+import org.objectweb.asm.Handle
+import org.objectweb.asm.Opcodes
 import org.objectweb.asm.Type
 
 public class ScratchCompiler private constructor(
@@ -21,11 +24,15 @@ public class ScratchCompiler private constructor(
     public companion object {
         public const val RUNTIME_PACKAGE: String = "io/github/gaming32/scratch2jvm/runtime"
         public const val SCRATCH_ABI: String = "$RUNTIME_PACKAGE/ScratchABI"
+        public const val ASYNC_HANDLER: String = "$RUNTIME_PACKAGE/AsyncHandler"
+        public const val ASYNC_SCHEDULER: String = "$RUNTIME_PACKAGE/AsyncScheduler"
         public const val TARGET_BASE: String = "$RUNTIME_PACKAGE/Target"
         public const val STAGE_BASE: String = "$RUNTIME_PACKAGE/Stage"
         public const val SPRITE_BASE: String = "$RUNTIME_PACKAGE/Sprite"
         public val USED_RUNTIME_CLASSES: List<String> = listOf(
-            SCRATCH_ABI, TARGET_BASE, STAGE_BASE, SPRITE_BASE
+            SCRATCH_ABI,
+            ASYNC_HANDLER, ASYNC_SCHEDULER, "$ASYNC_SCHEDULER\$ScheduledJob",
+            TARGET_BASE, STAGE_BASE, SPRITE_BASE
         )
 
         @JvmStatic
@@ -43,9 +50,47 @@ public class ScratchCompiler private constructor(
                     val superName = if (target.isStage) STAGE_BASE else SPRITE_BASE
                     put(className, assembleClass(public + final, className, superName = superName) {
                         field(public + static + final, "INSTANCE", className)
+
+                        for (block in target.rootBlocks.values) {
+                            field(private + static + final, escapeUnqualifiedName(block.id), ASYNC_HANDLER)
+                        }
+
                         clinit {
                             construct(className)
                             putstatic(className, "INSTANCE", className)
+                            for (block in target.rootBlocks.values) {
+                                invokedynamic(
+                                    "handle",
+                                    ASYNC_HANDLER as TypeLike,
+                                    handle = Handle(
+                                        Opcodes.H_INVOKESTATIC,
+                                        "java/lang/invoke/LambdaMetafactory",
+                                        "metafactory",
+                                        "(Ljava/lang/invoke/MethodHandles\$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/invoke/MethodType;Ljava/lang/invoke/MethodHandle;Ljava/lang/invoke/MethodType;)Ljava/lang/invoke/CallSite;",
+                                        false
+                                    ),
+                                    args = arrayOf(
+                                        Type.getMethodType(
+                                            coerceType(int),
+                                            coerceType(TARGET_BASE),
+                                            coerceType(int)
+                                        ),
+                                        Handle(
+                                            Opcodes.H_INVOKEVIRTUAL,
+                                            className,
+                                            escapeMethodName(block.id),
+                                            "(I)I",
+                                            false
+                                        ),
+                                        Type.getMethodType(
+                                            coerceType(int),
+                                            coerceType(className),
+                                            coerceType(int)
+                                        )
+                                    )
+                                )
+                                putstatic(className, escapeUnqualifiedName(block.id), ASYNC_HANDLER)
+                            }
                             _return
                         }
 
@@ -197,6 +242,8 @@ public class ScratchCompiler private constructor(
                             }
                         }
 
+                        val events = mutableListOf<Pair<String, Int>>()
+
                         for (block in target.rootBlocks.values) {
                             println(block.prettyPrint())
                             method(public, escapeMethodName(block.id), int, int) {
@@ -204,6 +251,24 @@ public class ScratchCompiler private constructor(
                                 iconst(SUSPEND_NO_RESCHEDULE)
                                 ireturn
                             }
+                            when (block.opcode) {
+                                ScratchOpcodes.EVENT_WHENFLAGCLICKED -> events += Pair(block.id, EVENT_FLAG_CLICKED)
+                                else -> {}
+                            }
+                        }
+
+                        method(public, "registerEvents", void, ASYNC_SCHEDULER) {
+                            for ((blockId, eventType) in events) {
+                                aload_1
+                                aload_0
+                                iconst(eventType)
+                                getstatic(className, escapeUnqualifiedName(blockId), ASYNC_HANDLER)
+                                invokevirtual(
+                                    ASYNC_SCHEDULER, "registerEventHandler",
+                                    void, TARGET_BASE, int, ASYNC_HANDLER
+                                )
+                            }
+                            _return
                         }
                     })
                 }
@@ -214,6 +279,17 @@ public class ScratchCompiler private constructor(
                     }
 
                     method(public + static, "main", void, Array<String>::class) {
+                        getstatic(SCRATCH_ABI, "SCHEDULER", ASYNC_SCHEDULER)
+                        for (target in project.targets.values.sortedBy { it.layerOrder }) {
+                            val className = escapePackageName("scratch", projectName, "target", target.name)
+                            dup
+                            getstatic(className, "INSTANCE", className)
+                            invokevirtual(ASYNC_SCHEDULER, "addTarget", void, TARGET_BASE)
+                        }
+                        dup
+                        iconst(EVENT_FLAG_CLICKED)
+                        invokevirtual(ASYNC_SCHEDULER, "scheduleEvent", void, int)
+                        invokevirtual(ASYNC_SCHEDULER, "runUntilComplete", void)
                         _return
                     }
                 })

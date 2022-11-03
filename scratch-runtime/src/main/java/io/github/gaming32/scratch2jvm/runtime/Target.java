@@ -12,4 +12,6 @@ public abstract class Target {
         this.name = name;
         this.isStage = isStage;
     }
+
+    public abstract void registerEvents(AsyncScheduler scheduler);
 }

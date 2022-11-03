@@ -11,6 +11,7 @@ import java.util.List;
 @SuppressWarnings("unused")
 public final class ScratchABI {
     public static final boolean CONSOLE_MODE = Boolean.getBoolean("scratch.consoleMode");
+    public static final AsyncScheduler SCHEDULER = new AsyncScheduler();
 
     private ScratchABI() {
         throw new AssertionError();

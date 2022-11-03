@@ -10,7 +10,6 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.StringJoiner;
 
 @SuppressWarnings("unused")
 public final class ScratchABI {
@@ -80,15 +79,22 @@ public final class ScratchABI {
     }
 
     public static String listToString(List<String> list) {
-        String sep = "";
+        int sep = 0;
         for (final String value : list) {
             if (value.length() != 1) {
-                sep = " ";
+                sep = 1;
                 break;
             }
         }
-        final StringJoiner result = new StringJoiner(sep);
-        list.forEach(result::add);
+        final StringBuilder result = new StringBuilder();
+        for (final String value : list) {
+            if (sep == 2) {
+                result.append(' ');
+            } else if (sep == 1) {
+                sep = 2;
+            }
+            result.append(value);
+        }
         return result.toString();
     }
 

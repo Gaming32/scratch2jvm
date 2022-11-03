@@ -40,6 +40,9 @@ public class ScratchCompiler private constructor(
             ScratchCompiler(projectName, project).compile()
     }
 
+    private lateinit var target: ScratchTarget
+    private var nextVariable = 0
+
     private fun compile(): CompilationResult {
         val mainClassName = escapePackageName("scratch", projectName, "Main")
         val resources = mutableMapOf<String, String>()
@@ -247,7 +250,9 @@ public class ScratchCompiler private constructor(
                         for (block in target.rootBlocks.values) {
                             println(block.prettyPrint())
                             method(public, escapeMethodName(block.id), int, int) {
-                                compileBlock(project.stage, target, block)
+                                this@ScratchCompiler.target = target
+                                nextVariable = 1
+                                compileBlock(block)
                                 iconst(SUSPEND_NO_RESCHEDULE)
                                 ireturn
                             }
@@ -298,13 +303,9 @@ public class ScratchCompiler private constructor(
         )
     }
 
-    private tailrec fun MethodAssembly.compileInput(
-        stage: ScratchTarget,
-        target: ScratchTarget,
-        input: ScratchInput<*>
-    ): Unit = when (input.type) {
-        ScratchInputTypes.SUBVALUED -> compileBlock(stage, target, (input as ReferenceInput).value)
-        ScratchInputTypes.FALLBACK -> compileInput(stage, target, (input as FallbackInput<*, *>).primary)
+    private tailrec fun MethodAssembly.compileInput(input: ScratchInput<*>): Unit = when (input.type) {
+        ScratchInputTypes.SUBVALUED -> compileBlock((input as ReferenceInput).value)
+        ScratchInputTypes.FALLBACK -> compileInput((input as FallbackInput<*, *>).primary)
         ScratchInputTypes.VALUE -> ldc((input as ValueInput).value)
         ScratchInputTypes.VARIABLE -> {
             val variable = (input as VariableInput).value
@@ -316,26 +317,91 @@ public class ScratchCompiler private constructor(
                     String::class
                 )
             } else {
-                val stageName = escapePackageName("scratch", projectName, "target", stage.name)
+                val stageName = escapePackageName("scratch", projectName, "target", project.stage.name)
                 getstatic(stageName, "INSTANCE", stageName)
                 getfield(stageName, escapeUnqualifiedName(variable.name), String::class)
             }
         }
+        ScratchInputTypes.BLOCK_STACK -> compileBlock((input as BlockStackInput).value)
         else -> throw IllegalArgumentException("Don't know how to compile input ${input.type} yet")
     }
 
-    private tailrec fun MethodAssembly.compileBlock(stage: ScratchTarget, target: ScratchTarget, block: ScratchBlock) {
+    private tailrec fun MethodAssembly.compileBlock(block: ScratchBlock) {
         when (block.opcode) {
             ScratchOpcodes.LOOKS_SAY -> {
                 aload_0
-                compileInput(stage, target, block.inputs.getValue("MESSAGE"))
+                compileInput(block.inputs.getValue("MESSAGE"))
                 invokestatic(SCRATCH_ABI, "say", void, TARGET_BASE, String::class)
             }
             ScratchOpcodes.EVENT_WHENFLAGCLICKED -> {}
+            ScratchOpcodes.CONTROL_REPEAT -> {
+                val countVariable = nextVariable++
+                nextVariable++
+                val indexVariable = nextVariable++
+                nextVariable++
+                compileInput(block.inputs.getValue("TIMES"))
+                invokestatic(SCRATCH_ABI, "getNumber", double, String::class)
+                dstore(countVariable)
+                dconst_0
+                dstore(indexVariable)
+                L.scope(this).also { l ->
+                    +l["repeat"]
+                    dload(indexVariable)
+                    dload(countVariable)
+                    dcmpl
+                    ifeq(l["end"])
+                    compileInput(block.inputs.getValue("SUBSTACK"))
+                    dload(indexVariable)
+                    dconst_1
+                    dadd
+                    dstore(indexVariable)
+                    goto(l["repeat"])
+                    +l["end"]
+                }
+                nextVariable -= 4
+            }
+            ScratchOpcodes.OPERATOR_ADD,
+            ScratchOpcodes.OPERATOR_SUBTRACT,
+            ScratchOpcodes.OPERATOR_MULTIPLY,
+            ScratchOpcodes.OPERATOR_DIVIDE,
+            ScratchOpcodes.OPERATOR_MOD -> {
+                compileInput(block.inputs.getValue("NUM1"))
+                invokestatic(SCRATCH_ABI, "getNumber", double, String::class)
+                compileInput(block.inputs.getValue("NUM2"))
+                invokestatic(SCRATCH_ABI, "getNumber", double, String::class)
+                when (block.opcode) {
+                    ScratchOpcodes.OPERATOR_ADD -> dadd
+                    ScratchOpcodes.OPERATOR_SUBTRACT -> dsub
+                    ScratchOpcodes.OPERATOR_MULTIPLY -> dmul
+                    ScratchOpcodes.OPERATOR_DIVIDE -> ddiv
+                    ScratchOpcodes.OPERATOR_MOD -> invokestatic(SCRATCH_ABI, "mod", double, double, double)
+                    else -> throw AssertionError()
+                }
+                invokestatic(Double::class.javaObjectType, "toString", String::class, double)
+            }
+            ScratchOpcodes.OPERATOR_RANDOM -> {
+                compileInput(block.inputs.getValue("FROM"))
+                invokestatic(SCRATCH_ABI, "getNumber", double, String::class)
+                compileInput(block.inputs.getValue("TO"))
+                invokestatic(SCRATCH_ABI, "getNumber", double, String::class)
+                invokestatic(SCRATCH_ABI, "random", double, double, double)
+                invokestatic(Double::class.javaObjectType, "toString", String::class, double)
+            }
             ScratchOpcodes.OPERATOR_JOIN -> {
-                compileInput(stage, target, block.inputs.getValue("STRING1"))
-                compileInput(stage, target, block.inputs.getValue("STRING2"))
+                compileInput(block.inputs.getValue("STRING1"))
+                compileInput(block.inputs.getValue("STRING2"))
                 invokevirtual(String::class, "concat", String::class, String::class)
+            }
+            ScratchOpcodes.OPERATOR_LETTER_OF -> {
+                compileInput(block.inputs.getValue("STRING"))
+                compileInput(block.inputs.getValue("LETTER"))
+                invokestatic(SCRATCH_ABI, "getNumber", double, String::class)
+                invokestatic(SCRATCH_ABI, "letterOf", String::class, String::class, double)
+            }
+            ScratchOpcodes.OPERATOR_LENGTH -> {
+                compileInput(block.inputs.getValue("STRING"))
+                invokevirtual(String::class, "length", int)
+                invokestatic(Int::class.javaObjectType, "toString", String::class, int)
             }
             ScratchOpcodes.DATA_SETVARIABLETO -> {
                 val variable = block.fields.getValue("VARIABLE")
@@ -344,10 +410,10 @@ public class ScratchCompiler private constructor(
                 if (isLocal) {
                     aload_0
                 } else {
-                    stageName = escapePackageName("scratch", projectName, "target", stage.name)
+                    stageName = escapePackageName("scratch", projectName, "target", project.stage.name)
                     getstatic(stageName, "INSTANCE", stageName)
                 }
-                compileInput(stage, target, block.inputs.getValue("VALUE"))
+                compileInput(block.inputs.getValue("VALUE"))
                 if (isLocal) {
                     putfield(
                         escapePackageName("scratch", projectName, "target", target.name),
@@ -360,6 +426,6 @@ public class ScratchCompiler private constructor(
             }
             else -> throw IllegalArgumentException("Don't know how to compile block ${block.opcode} yet")
         }
-        block.next?.let { return compileBlock(stage, target, it) }
+        block.next?.let { return compileBlock(it) }
     }
 }

@@ -47,6 +47,34 @@ public final class ScratchABI {
         }
     }
 
+    public static double getNumber(String value) {
+        if (value.isEmpty()) return 0.0;
+        try {
+            return Double.parseDouble(value);
+        } catch (NumberFormatException e) {
+            return 0.0;
+        }
+    }
+
+    public static double mod(double a, double b) {
+        final double result = a % b;
+        if ((b < 0) != (result < 0)) {
+            return result + b;
+        }
+        return result;
+    }
+
+    public static double random(double from, double to) {
+        return Math.floor(from + Math.random() * (to - from + 1));
+    }
+
+    public static String letterOf(String s, double letter) {
+        if (letter < 1 || letter > s.length()) {
+            return "";
+        }
+        return String.valueOf(s.charAt((int)letter - 1));
+    }
+
     private static void onlyImplementedInConsole(String opcode) {
         throw new UnsupportedOperationException(opcode + " outside of console mode");
     }

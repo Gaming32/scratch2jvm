@@ -7,13 +7,20 @@ public enum class ScratchOpcodes(public val id: String) {
 
     EVENT_WHENFLAGCLICKED("event_whenflagclicked"),
 
+    CONTROL_REPEAT("control_repeat"),
     CONTROL_FOREVER("control_forever"),
     CONTROL_IF("control_if"),
 
+    OPERATOR_ADD("operator_add"),
     OPERATOR_SUBTRACT("operator_subtract"),
+    OPERATOR_MULTIPLY("operator_multiply"),
     OPERATOR_DIVIDE("operator_divide"),
+    OPERATOR_RANDOM("operator_random"),
     OPERATOR_GT("operator_gt"),
     OPERATOR_JOIN("operator_join"),
+    OPERATOR_LETTER_OF("operator_letter_of"),
+    OPERATOR_LENGTH("operator_length"),
+    OPERATOR_MOD("operator_mod"),
 
     DATA_SETVARIABLETO("data_setvariableto"),
     DATA_CHANGEVARIABLEBY("data_changevariableby"),
@@ -47,15 +54,22 @@ public object EventsOpcodes {
 }
 
 public object ControlOpcodes {
+    public val REPEAT: ScratchOpcodes = ScratchOpcodes.CONTROL_REPEAT
     public val FOREVER: ScratchOpcodes = ScratchOpcodes.CONTROL_FOREVER
     public val IF: ScratchOpcodes = ScratchOpcodes.CONTROL_IF
 }
 
 public object OperatorsOpcodes {
+    public val ADD: ScratchOpcodes = ScratchOpcodes.OPERATOR_ADD
     public val SUBTRACT: ScratchOpcodes = ScratchOpcodes.OPERATOR_SUBTRACT
+    public val MULTIPLY: ScratchOpcodes = ScratchOpcodes.OPERATOR_MULTIPLY
     public val DIVIDE: ScratchOpcodes = ScratchOpcodes.OPERATOR_DIVIDE
+    public val RANDOM: ScratchOpcodes = ScratchOpcodes.OPERATOR_RANDOM
     public val GT: ScratchOpcodes = ScratchOpcodes.OPERATOR_GT
     public val JOIN: ScratchOpcodes = ScratchOpcodes.OPERATOR_JOIN
+    public val LETTER_OF: ScratchOpcodes = ScratchOpcodes.OPERATOR_LETTER_OF
+    public val LENGTH: ScratchOpcodes = ScratchOpcodes.OPERATOR_LENGTH
+    public val MOD: ScratchOpcodes = ScratchOpcodes.OPERATOR_MOD
 }
 
 public object VariablesOpcodes {

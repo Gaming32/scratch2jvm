@@ -1,4 +1,6 @@
-package io.github.gaming32.scratch2jvm.runtime;
+package io.github.gaming32.scratch2jvm.runtime.target;
+
+import io.github.gaming32.scratch2jvm.runtime.async.AsyncScheduler;
 
 @SuppressWarnings("unused")
 public abstract class Target {

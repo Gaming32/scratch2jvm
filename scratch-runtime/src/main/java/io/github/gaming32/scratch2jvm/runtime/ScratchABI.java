@@ -1,5 +1,8 @@
 package io.github.gaming32.scratch2jvm.runtime;
 
+import io.github.gaming32.scratch2jvm.runtime.async.AsyncScheduler;
+import io.github.gaming32.scratch2jvm.runtime.target.Target;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;

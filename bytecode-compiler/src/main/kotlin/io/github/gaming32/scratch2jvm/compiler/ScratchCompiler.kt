@@ -22,16 +22,19 @@ public class ScratchCompiler private constructor(
     private val project: ScratchProject
 ) {
     public companion object {
-        public const val RUNTIME_PACKAGE: String = "io/github/gaming32/scratch2jvm/runtime"
+        private const val RUNTIME_PACKAGE: String = "io/github/gaming32/scratch2jvm/runtime"
         public const val SCRATCH_ABI: String = "$RUNTIME_PACKAGE/ScratchABI"
-        public const val ASYNC_HANDLER: String = "$RUNTIME_PACKAGE/AsyncHandler"
-        public const val ASYNC_SCHEDULER: String = "$RUNTIME_PACKAGE/AsyncScheduler"
-        public const val TARGET_BASE: String = "$RUNTIME_PACKAGE/Target"
-        public const val STAGE_BASE: String = "$RUNTIME_PACKAGE/Stage"
-        public const val SPRITE_BASE: String = "$RUNTIME_PACKAGE/Sprite"
+        private const val ASYNC_PACKAGE: String = "$RUNTIME_PACKAGE/async"
+        public const val ASYNC_HANDLER: String = "$ASYNC_PACKAGE/AsyncHandler"
+        public const val ASYNC_SCHEDULER: String = "$ASYNC_PACKAGE/AsyncScheduler"
+        public const val SCHEDULED_JOB: String = "$ASYNC_PACKAGE/ScheduledJob"
+        private const val TARGET_PACKAGE: String = "$RUNTIME_PACKAGE/target"
+        public const val TARGET_BASE: String = "$TARGET_PACKAGE/Target"
+        public const val STAGE_BASE: String = "$TARGET_PACKAGE/Stage"
+        public const val SPRITE_BASE: String = "$TARGET_PACKAGE/Sprite"
         public val USED_RUNTIME_CLASSES: List<String> = listOf(
             SCRATCH_ABI,
-            ASYNC_HANDLER, ASYNC_SCHEDULER, "$ASYNC_SCHEDULER\$ScheduledJob",
+            ASYNC_HANDLER, ASYNC_SCHEDULER, SCHEDULED_JOB,
             TARGET_BASE, STAGE_BASE, SPRITE_BASE
         )
 
@@ -76,19 +79,19 @@ public class ScratchCompiler private constructor(
                                         Type.getMethodType(
                                             coerceType(int),
                                             coerceType(TARGET_BASE),
-                                            coerceType(int)
+                                            coerceType(SCHEDULED_JOB)
                                         ),
                                         Handle(
                                             Opcodes.H_INVOKEVIRTUAL,
                                             className,
                                             escapeMethodName(block.id),
-                                            "(I)I",
+                                            "(L$SCHEDULED_JOB;)I",
                                             false
                                         ),
                                         Type.getMethodType(
                                             coerceType(int),
                                             coerceType(className),
-                                            coerceType(int)
+                                            coerceType(SCHEDULED_JOB)
                                         )
                                     )
                                 )
@@ -249,7 +252,7 @@ public class ScratchCompiler private constructor(
 
                         for (block in target.rootBlocks.values) {
                             println(block.prettyPrint())
-                            method(public, escapeMethodName(block.id), int, int) {
+                            method(public, escapeMethodName(block.id), int, SCHEDULED_JOB) {
                                 this@ScratchCompiler.target = target
                                 nextVariable = 1
                                 compileBlock(block)

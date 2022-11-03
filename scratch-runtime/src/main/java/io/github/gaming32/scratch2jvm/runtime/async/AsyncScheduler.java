@@ -1,18 +1,11 @@
-package io.github.gaming32.scratch2jvm.runtime;
+package io.github.gaming32.scratch2jvm.runtime.async;
+
+import io.github.gaming32.scratch2jvm.runtime.target.Target;
 
 import java.util.*;
 
 @SuppressWarnings("unused")
 public final class AsyncScheduler {
-    private static final class ScheduledJob {
-        final AsyncHandler handler;
-        int label = 0;
-
-        ScheduledJob(AsyncHandler handler) {
-            this.handler = handler;
-        }
-    }
-
     private static final int SUSPEND_NO_RESCHEDULE = -1;
     private static final int SUSPEND_CANCEL_ALL = -2;
 
@@ -88,7 +81,7 @@ public final class AsyncScheduler {
                 final Iterator<ScheduledJob> iter = targetJobs.iterator();
                 while (iter.hasNext()) {
                     final ScheduledJob job = iter.next();
-                    final int state = job.handler.handle(target, job.label);
+                    final int state = job.handler.handle(target, job);
                     switch (state) {
                         case SUSPEND_NO_RESCHEDULE:
                             iter.remove();

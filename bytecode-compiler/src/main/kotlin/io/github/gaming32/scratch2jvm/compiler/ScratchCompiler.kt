@@ -44,7 +44,10 @@ public class ScratchCompiler private constructor(
     }
 
     private lateinit var target: ScratchTarget
-    private var nextVariable = 0
+    private var warp = false
+    private var stateIndex = 0
+    private var maxStateIndex = 0
+    private var labelIndex = 0
 
     private fun compile(): CompilationResult {
         val mainClassName = escapePackageName("scratch", projectName, "Main")
@@ -257,10 +260,41 @@ public class ScratchCompiler private constructor(
                             println(block.prettyPrint())
                             method(public, escapeMethodName(block.id), int, SCHEDULED_JOB) {
                                 this@ScratchCompiler.target = target
-                                nextVariable = 1
+                                stateIndex = 0
+                                maxStateIndex = -1
+                                labelIndex = 0
+                                goto(L["main_end_check"])
+                                addAsyncLabel()
                                 compileBlock(block)
                                 push_int(SUSPEND_NO_RESCHEDULE)
                                 ireturn
+                                +L["main_end_check"]
+                                aload_1
+                                getfield(SCHEDULED_JOB, "label", int)
+                                tableswitch(
+                                    0, labelIndex - 1, L["main_unknown_label"],
+                                    L["main_init_state"],
+                                    *Array(labelIndex - 1) { L[it + 1] }
+                                )
+                                +L["main_init_state"]
+                                if (maxStateIndex != -1) {
+                                    aload_1
+                                    push_int(maxStateIndex + 1)
+                                    newarray(double)
+                                    putfield(SCHEDULED_JOB, "state", DoubleArray::class)
+                                }
+                                goto(L[0])
+                                +L["main_unknown_label"]
+                                construct(Error::class, void, String::class) {
+                                    construct(StringBuilder::class, void, String::class) {
+                                        ldc("Unknown label: ")
+                                    }
+                                    aload_1
+                                    getfield(SCHEDULED_JOB, "label", int)
+                                    invokevirtual(StringBuilder::class, "append", StringBuilder::class, int)
+                                    invokevirtual(StringBuilder::class, "toString", String::class)
+                                }
+                                athrow
                             }
                             when (block.opcode) {
                                 ScratchOpcodes.EVENT_WHENFLAGCLICKED -> events += Pair(block.id, EVENT_FLAG_CLICKED)
@@ -341,30 +375,47 @@ public class ScratchCompiler private constructor(
             }
             ScratchOpcodes.EVENT_WHENFLAGCLICKED -> {}
             ScratchOpcodes.CONTROL_REPEAT -> {
-                val countVariable = nextVariable++
-                nextVariable++
-                val indexVariable = nextVariable++
-                nextVariable++
-                compileInput(block.inputs.getValue("TIMES"))
-                invokestatic(SCRATCH_ABI, "getNumber", double, String::class)
-                dstore(countVariable)
-                dconst_0
-                dstore(indexVariable)
-                L.scope(this).also { l ->
-                    +l["repeat"]
-                    dload(indexVariable)
-                    dload(countVariable)
-                    dcmpl
-                    ifeq(l["end"])
-                    compileInput(block.inputs.getValue("SUBSTACK"))
-                    dload(indexVariable)
-                    dconst_1
-                    dadd
-                    dstore(indexVariable)
-                    goto(l["repeat"])
-                    +l["end"]
+                val countState = newState()
+                val indexState = newState()
+                setState(countState) {
+                    compileInput(block.inputs.getValue("TIMES"))
+                    invokestatic(SCRATCH_ABI, "getNumber", double, String::class)
                 }
-                nextVariable -= 4
+                setState(indexState) {
+                    dconst_0
+                }
+                L.scope(this).also { l ->
+                    if (warp) {
+                        +l["repeat"]
+                        getState(indexState)
+                        getState(countState)
+                        dcmpl
+                        ifeq(l["end"])
+                        compileInput(block.inputs.getValue("SUBSTACK"))
+                        setState(indexState) {
+                            getState(indexState)
+                            dconst_1
+                            dadd
+                        }
+                        goto(l["repeat"])
+                        +l["end"]
+                    } else {
+                        val labelIndex = addAsyncLabel()
+                        getState(indexState)
+                        getState(countState)
+                        dcmpl
+                        ifeq(l["end"])
+                        compileInput(block.inputs.getValue("SUBSTACK"))
+                        setState(indexState) {
+                            getState(indexState)
+                            dconst_1
+                            dadd
+                        }
+                        push_int(labelIndex)
+                        ireturn
+                        +l["end"]
+                    }
+                }
             }
             ScratchOpcodes.OPERATOR_ADD,
             ScratchOpcodes.OPERATOR_SUBTRACT,
@@ -433,5 +484,34 @@ public class ScratchCompiler private constructor(
             else -> throw IllegalArgumentException("Don't know how to compile block ${block.opcode} yet")
         }
         block.next?.let { return compileBlock(it) }
+    }
+
+    private fun newState(): Int {
+        val index = stateIndex++
+        if (index > maxStateIndex) {
+            maxStateIndex = index
+        }
+        return index
+    }
+
+    private fun MethodAssembly.getState(index: Int) {
+        aload_1
+        getfield(SCHEDULED_JOB, "state", DoubleArray::class)
+        push_int(index)
+        daload
+    }
+
+    private inline fun MethodAssembly.setState(index: Int, state: () -> Unit) {
+        aload_1
+        getfield(SCHEDULED_JOB, "state", DoubleArray::class)
+        push_int(index)
+        state()
+        dastore
+    }
+
+    private fun MethodAssembly.addAsyncLabel(): Int {
+        val newIndex = labelIndex++
+        +L[newIndex]
+        return newIndex
     }
 }

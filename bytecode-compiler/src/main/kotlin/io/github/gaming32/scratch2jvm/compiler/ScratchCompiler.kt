@@ -4,6 +4,7 @@ import codes.som.koffee.MethodAssembly
 import codes.som.koffee.assembleClass
 import codes.som.koffee.insns.jvm.*
 import codes.som.koffee.insns.sugar.construct
+import codes.som.koffee.insns.sugar.push_int
 import codes.som.koffee.modifiers.final
 import codes.som.koffee.modifiers.public
 import codes.som.koffee.sugar.ClassAssemblyExtension.clinit
@@ -13,9 +14,8 @@ import io.github.gaming32.scratch2jvm.parser.ast.*
 import io.github.gaming32.scratch2jvm.parser.data.ScratchProject
 import io.github.gaming32.scratch2jvm.parser.data.ScratchTarget
 import io.github.gaming32.scratch2jvm.parser.prettyPrint
-import org.objectweb.asm.Handle
-import org.objectweb.asm.Opcodes
 import org.objectweb.asm.Type
+import java.lang.invoke.*
 
 public class ScratchCompiler private constructor(
     private val projectName: String,
@@ -68,12 +68,16 @@ public class ScratchCompiler private constructor(
                                 invokedynamic(
                                     "handle",
                                     ASYNC_HANDLER as TypeLike,
-                                    handle = Handle(
-                                        Opcodes.H_INVOKESTATIC,
-                                        "java/lang/invoke/LambdaMetafactory",
+                                    handle = h_invokestatic(
+                                        LambdaMetafactory::class,
                                         "metafactory",
-                                        "(Ljava/lang/invoke/MethodHandles\$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/invoke/MethodType;Ljava/lang/invoke/MethodHandle;Ljava/lang/invoke/MethodType;)Ljava/lang/invoke/CallSite;",
-                                        false
+                                        CallSite::class,
+                                        MethodHandles.Lookup::class,
+                                        String::class,
+                                        MethodType::class,
+                                        MethodType::class,
+                                        MethodHandle::class,
+                                        MethodType::class
                                     ),
                                     args = arrayOf(
                                         Type.getMethodType(
@@ -81,12 +85,11 @@ public class ScratchCompiler private constructor(
                                             coerceType(TARGET_BASE),
                                             coerceType(SCHEDULED_JOB)
                                         ),
-                                        Handle(
-                                            Opcodes.H_INVOKEVIRTUAL,
+                                        h_invokevirtual(
                                             className,
                                             escapeMethodName(block.id),
-                                            "(L$SCHEDULED_JOB;)I",
-                                            false
+                                            int,
+                                            SCHEDULED_JOB
                                         ),
                                         Type.getMethodType(
                                             coerceType(int),
@@ -129,14 +132,14 @@ public class ScratchCompiler private constructor(
                                     }
                                     ldc(Type.getObjectType(className))
                                     ldc(resourceName)
-                                    iconst(list.value.size)
+                                    push_int(list.value.size)
                                     invokestatic(
                                         SCRATCH_ABI, "loadListResource",
                                         List::class, Class::class, String::class, int
                                     )
                                 } else {
                                     construct(ArrayList::class, void, int) {
-                                        iconst(list.value.size)
+                                        push_int(list.value.size)
                                     }
                                     for (element in list.value) {
                                         dup
@@ -148,30 +151,30 @@ public class ScratchCompiler private constructor(
                                 putfield(className, escapeUnqualifiedName(list.name), List::class)
                             }
                             aload_0
-                            iconst(target.currentCostume)
+                            push_int(target.currentCostume)
                             putfield(TARGET_BASE, "costume", int)
                             aload_0
-                            dconst(target.volume)
+                            push_double(target.volume)
                             putfield(TARGET_BASE, "volume", double)
                             aload_0
-                            iconst(target.layerOrder)
+                            push_int(target.layerOrder)
                             putfield(TARGET_BASE, "layerOrder", int)
                             if (target.isStage) {
                                 aload_0
-                                dconst(target.tempo)
+                                push_double(target.tempo)
                                 putfield(STAGE_BASE, "tempo", double)
                             } else {
                                 aload_0
-                                dconst(target.x)
+                                push_double(target.x)
                                 putfield(SPRITE_BASE, "x", double)
                                 aload_0
-                                dconst(target.y)
+                                push_double(target.y)
                                 putfield(SPRITE_BASE, "y", double)
                                 aload_0
-                                dconst(target.size)
+                                push_double(target.size)
                                 putfield(SPRITE_BASE, "size", double)
                                 aload_0
-                                dconst(target.direction)
+                                push_double(target.direction)
                                 putfield(SPRITE_BASE, "direction", double)
                                 aload_0
                                 if (target.draggable) {
@@ -181,7 +184,7 @@ public class ScratchCompiler private constructor(
                                 }
                                 putfield(SPRITE_BASE, "draggable", boolean)
                                 aload_0
-                                iconst(target.rotationStyle.toInt())
+                                push_int(target.rotationStyle.toInt())
                                 putfield(SPRITE_BASE, "rotationStyle", byte)
                             }
                             _return
@@ -256,7 +259,7 @@ public class ScratchCompiler private constructor(
                                 this@ScratchCompiler.target = target
                                 nextVariable = 1
                                 compileBlock(block)
-                                iconst(SUSPEND_NO_RESCHEDULE)
+                                push_int(SUSPEND_NO_RESCHEDULE)
                                 ireturn
                             }
                             when (block.opcode) {
@@ -269,7 +272,7 @@ public class ScratchCompiler private constructor(
                             for ((blockId, eventType) in events) {
                                 aload_1
                                 aload_0
-                                iconst(eventType)
+                                push_int(eventType)
                                 getstatic(className, escapeUnqualifiedName(blockId), ASYNC_HANDLER)
                                 invokevirtual(
                                     ASYNC_SCHEDULER, "registerEventHandler",
@@ -295,7 +298,7 @@ public class ScratchCompiler private constructor(
                             invokevirtual(ASYNC_SCHEDULER, "addTarget", void, TARGET_BASE)
                         }
                         dup
-                        iconst(EVENT_FLAG_CLICKED)
+                        push_int(EVENT_FLAG_CLICKED)
                         invokevirtual(ASYNC_SCHEDULER, "scheduleEvent", void, int)
                         invokevirtual(ASYNC_SCHEDULER, "runUntilComplete", void)
                         _return

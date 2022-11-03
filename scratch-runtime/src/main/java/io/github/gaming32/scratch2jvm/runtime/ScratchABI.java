@@ -8,9 +8,9 @@ public final class ScratchABI {
         throw new AssertionError();
     }
 
-    public static void say(String what) {
+    public static void say(Target target, String what) {
         if (CONSOLE_MODE) {
-            System.out.println(what);
+            System.out.println("SAY: " + target.name + ": " + what);
         } else {
             onlyImplementedInConsole("looks_say");
         }

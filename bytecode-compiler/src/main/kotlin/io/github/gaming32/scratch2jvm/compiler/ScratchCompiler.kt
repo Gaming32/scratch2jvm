@@ -229,8 +229,9 @@ public class ScratchCompiler private constructor(
         when (block.opcode) {
             ScratchOpcodes.EVENT_WHENFLAGCLICKED -> {}
             ScratchOpcodes.LOOKS_SAY -> {
+                aload_0
                 compileInput(stage, target, block.inputs.getValue("MESSAGE"))
-                invokestatic(SCRATCH_ABI, "say", void, String::class)
+                invokestatic(SCRATCH_ABI, "say", void, TARGET_BASE, String::class)
             }
             else -> throw IllegalArgumentException("Don't know how to compile block ${block.opcode} yet")
         }

@@ -34,7 +34,7 @@ public fun compileToJar(inFile: File, outFile: File) {
                 }
             }
             for ((name, data) in result.resources) {
-                val destPath = outJar.getPath("$name.class")
+                val destPath = outJar.getPath(name)
                 destPath.writer(Charsets.UTF_8).use {
                     it.write(data)
                 }

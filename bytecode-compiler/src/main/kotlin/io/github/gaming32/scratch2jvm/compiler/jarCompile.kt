@@ -16,7 +16,7 @@ import kotlin.io.path.writer
 public fun compileToJar(inFile: File, outFile: File) {
     outFile.delete()
     ScratchProjectFile.open(inFile).use { project ->
-        val (classes, mainClassName) = ScratchCompiler.compile(inFile.nameWithoutExtension, project.project)
+        val result = ScratchCompiler.compile(inFile.nameWithoutExtension, project.project)
         FileSystems.newFileSystem(URI("jar:" + outFile.toURI()), mapOf("create" to "true")).use { outJar ->
             for (entry in project.scratchZip.entries()) {
                 if (entry.name == "project.json") continue
@@ -24,19 +24,25 @@ public fun compileToJar(inFile: File, outFile: File) {
                     Files.copy(it, outJar.getPath(entry.name), StandardCopyOption.REPLACE_EXISTING)
                 }
             }
-            for (clazz in classes) {
+            for ((name, clazz) in result.classes) {
                 val writer = ClassWriter(ClassWriter.COMPUTE_FRAMES)
                 clazz.accept(writer)
-                val destPath = outJar.getPath(clazz.name + ".class")
+                val destPath = outJar.getPath("$name.class")
                 destPath.parent.createDirectories()
                 destPath.outputStream().use {
                     it.write(writer.toByteArray())
                 }
             }
+            for ((name, data) in result.resources) {
+                val destPath = outJar.getPath("$name.class")
+                destPath.writer(Charsets.UTF_8).use {
+                    it.write(data)
+                }
+            }
             outJar.getPath("META-INF").createDirectory()
             outJar.getPath("META-INF/MANIFEST.MF").writer(Charsets.UTF_8).use {
                 it.write("Manifest-Version: 1.0\n")
-                it.write("Main-Class: ${mainClassName.replace('/', '.')}\n")
+                it.write("Main-Class: ${result.mainClass.replace('/', '.')}\n")
             }
             for (className in ScratchCompiler.USED_RUNTIME_CLASSES) {
                 ScratchABI::class.java.getResourceAsStream("/$className.class")?.use {

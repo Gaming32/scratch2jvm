@@ -12,7 +12,7 @@ import io.github.gaming32.scratch2jvm.parser.ast.*
 import io.github.gaming32.scratch2jvm.parser.data.ScratchProject
 import io.github.gaming32.scratch2jvm.parser.data.ScratchTarget
 import io.github.gaming32.scratch2jvm.parser.prettyPrint
-import org.objectweb.asm.tree.ClassNode
+import org.objectweb.asm.Type
 
 public class ScratchCompiler private constructor(
     private val projectName: String,
@@ -29,175 +29,197 @@ public class ScratchCompiler private constructor(
         )
 
         @JvmStatic
-        public fun compile(projectName: String, project: ScratchProject): Pair<List<ClassNode>, String> = Pair(
-            ScratchCompiler(projectName, project).compile(),
-            escapePackageName("scratch", projectName, "Main")
-        )
+        public fun compile(projectName: String, project: ScratchProject): CompilationResult =
+            ScratchCompiler(projectName, project).compile()
     }
 
-    private fun compile() = buildList {
-        for (target in project.targets.values) {
-            val className = escapePackageName("scratch", projectName, "target", target.name)
-            val superName = if (target.isStage) STAGE_BASE else SPRITE_BASE
-            add(assembleClass(public + final, className, superName = superName) {
-                field(public + static + final, "INSTANCE", className)
-                clinit {
-                    construct(className)
-                    putstatic(className, "INSTANCE", className)
-                    _return
-                }
-
-                for (variable in target.variables.values) {
-                    field(public, escapeUnqualifiedName(variable.name), String::class)
-                }
-
-                for (list in target.lists.values) {
-                    field(public, escapeUnqualifiedName(list.name), List::class, "Ljava/util/List<Ljava/lang/String;>;")
-                }
-
-                method(private, "<init>", void) {
-                    aload_0
-                    ldc(target.name)
-                    invokespecial(superName, "<init>", void, String::class)
-                    for (variable in target.variables.values) {
-                        aload_0
-                        ldc(variable.value)
-                        putfield(className, escapeUnqualifiedName(variable.name), String::class)
-                    }
-                    for (list in target.lists.values) {
-                        aload_0
-                        construct(ArrayList::class, void, int) {
-                            iconst(list.value.size)
+    private fun compile(): CompilationResult {
+        val mainClassName = escapePackageName("scratch", projectName, "Main")
+        val resources = mutableMapOf<String, String>()
+        return CompilationResult(
+            buildMap {
+                for (target in project.targets.values) {
+                    val className = escapePackageName("scratch", projectName, "target", target.name)
+                    val superName = if (target.isStage) STAGE_BASE else SPRITE_BASE
+                    put(className, assembleClass(public + final, className, superName = superName) {
+                        field(public + static + final, "INSTANCE", className)
+                        clinit {
+                            construct(className)
+                            putstatic(className, "INSTANCE", className)
+                            _return
                         }
-                        for (element in list.value) {
-                            dup
-                            ldc(element)
-                            invokeinterface(List::class, "add", boolean, Any::class)
-                            pop
-                        }
-                        putfield(className, escapeUnqualifiedName(list.name), List::class)
-                    }
-                    aload_0
-                    iconst(target.currentCostume)
-                    putfield(TARGET_BASE, "costume", int)
-                    aload_0
-                    dconst(target.volume)
-                    putfield(TARGET_BASE, "volume", double)
-                    aload_0
-                    iconst(target.layerOrder)
-                    putfield(TARGET_BASE, "layerOrder", int)
-                    if (target.isStage) {
-                        aload_0
-                        dconst(target.tempo)
-                        putfield(STAGE_BASE, "tempo", double)
-                    } else {
-                        aload_0
-                        dconst(target.x)
-                        putfield(SPRITE_BASE, "x", double)
-                        aload_0
-                        dconst(target.y)
-                        putfield(SPRITE_BASE, "y", double)
-                        aload_0
-                        dconst(target.size)
-                        putfield(SPRITE_BASE, "size", double)
-                        aload_0
-                        dconst(target.direction)
-                        putfield(SPRITE_BASE, "direction", double)
-                        aload_0
-                        if (target.draggable) {
-                            iconst_1
-                        } else {
-                            iconst_0
-                        }
-                        putfield(SPRITE_BASE, "draggable", boolean)
-                        aload_0
-                        iconst(target.rotationStyle.toInt())
-                        putfield(SPRITE_BASE, "rotationStyle", byte)
-                    }
-                    _return
-                }
 
-                if (!target.isStage) {
-                    method(private, "<init>", void, className) {
-                        aload_0
-                        ldc(target.name)
-                        invokespecial(superName, "<init>", void, String::class)
                         for (variable in target.variables.values) {
-                            val name = escapeUnqualifiedName(variable.name)
-                            aload_0
-                            aload_1
-                            getfield(className, name, String::class)
-                            putfield(className, name, String::class)
+                            field(public, escapeUnqualifiedName(variable.name), String::class)
                         }
+
                         for (list in target.lists.values) {
-                            val name = escapeUnqualifiedName(list.name)
-                            aload_0
-                            construct(ArrayList::class, void, Collection::class) {
-                                aload_1
-                                getfield(className, name, List::class)
-                            }
-                            putfield(className, name, List::class)
+                            field(public, escapeUnqualifiedName(list.name), List::class, "Ljava/util/List<Ljava/lang/String;>;")
                         }
-                        aload_0
-                        aload_1
-                        getfield(TARGET_BASE, "costume", int)
-                        putfield(TARGET_BASE, "costume", int)
-                        aload_0
-                        aload_1
-                        getfield(TARGET_BASE, "volume", double)
-                        putfield(TARGET_BASE, "volume", double)
-                        aload_0
-                        aload_1
-                        getfield(TARGET_BASE, "layerOrder", int)
-                        putfield(TARGET_BASE, "layerOrder", int)
-                        aload_0
-                        aload_1
-                        getfield(SPRITE_BASE, "x", double)
-                        putfield(SPRITE_BASE, "x", double)
-                        aload_0
-                        aload_1
-                        getfield(SPRITE_BASE, "y", double)
-                        putfield(SPRITE_BASE, "y", double)
-                        aload_0
-                        aload_1
-                        getfield(SPRITE_BASE, "size", double)
-                        putfield(SPRITE_BASE, "size", double)
-                        aload_0
-                        aload_1
-                        getfield(SPRITE_BASE, "direction", double)
-                        putfield(SPRITE_BASE, "direction", double)
-                        aload_0
-                        aload_1
-                        getfield(SPRITE_BASE, "draggable", boolean)
-                        putfield(SPRITE_BASE, "draggable", boolean)
-                        aload_0
-                        aload_1
-                        getfield(SPRITE_BASE, "rotationStyle", byte)
-                        putfield(SPRITE_BASE, "rotationStyle", byte)
+
+                        method(private, "<init>", void) {
+                            aload_0
+                            ldc(target.name)
+                            invokespecial(superName, "<init>", void, String::class)
+                            for (variable in target.variables.values) {
+                                aload_0
+                                ldc(variable.value)
+                                putfield(className, escapeUnqualifiedName(variable.name), String::class)
+                            }
+                            for (list in target.lists.values) {
+                                aload_0
+                                if (list.value.size > 50) {
+                                    val resourceName = escapeUnqualifiedName(list.id) + ".txt"
+                                    resources[resourceName] = buildString {
+                                        for (element in list.value) {
+                                            append(element)
+                                            append('\n')
+                                        }
+                                    }
+                                    ldc(Type.getObjectType(className))
+                                    ldc(resourceName)
+                                    iconst(list.value.size)
+                                    invokestatic(
+                                        SCRATCH_ABI, "loadListResource",
+                                        List::class, Class::class, String::class, int
+                                    )
+                                } else {
+                                    construct(ArrayList::class, void, int) {
+                                        iconst(list.value.size)
+                                    }
+                                    for (element in list.value) {
+                                        dup
+                                        ldc(element)
+                                        invokeinterface(List::class, "add", boolean, Any::class)
+                                        pop
+                                    }
+                                }
+                                putfield(className, escapeUnqualifiedName(list.name), List::class)
+                            }
+                            aload_0
+                            iconst(target.currentCostume)
+                            putfield(TARGET_BASE, "costume", int)
+                            aload_0
+                            dconst(target.volume)
+                            putfield(TARGET_BASE, "volume", double)
+                            aload_0
+                            iconst(target.layerOrder)
+                            putfield(TARGET_BASE, "layerOrder", int)
+                            if (target.isStage) {
+                                aload_0
+                                dconst(target.tempo)
+                                putfield(STAGE_BASE, "tempo", double)
+                            } else {
+                                aload_0
+                                dconst(target.x)
+                                putfield(SPRITE_BASE, "x", double)
+                                aload_0
+                                dconst(target.y)
+                                putfield(SPRITE_BASE, "y", double)
+                                aload_0
+                                dconst(target.size)
+                                putfield(SPRITE_BASE, "size", double)
+                                aload_0
+                                dconst(target.direction)
+                                putfield(SPRITE_BASE, "direction", double)
+                                aload_0
+                                if (target.draggable) {
+                                    iconst_1
+                                } else {
+                                    iconst_0
+                                }
+                                putfield(SPRITE_BASE, "draggable", boolean)
+                                aload_0
+                                iconst(target.rotationStyle.toInt())
+                                putfield(SPRITE_BASE, "rotationStyle", byte)
+                            }
+                            _return
+                        }
+
+                        if (!target.isStage) {
+                            method(private, "<init>", void, className) {
+                                aload_0
+                                ldc(target.name)
+                                invokespecial(superName, "<init>", void, String::class)
+                                for (variable in target.variables.values) {
+                                    val name = escapeUnqualifiedName(variable.name)
+                                    aload_0
+                                    aload_1
+                                    getfield(className, name, String::class)
+                                    putfield(className, name, String::class)
+                                }
+                                for (list in target.lists.values) {
+                                    val name = escapeUnqualifiedName(list.name)
+                                    aload_0
+                                    construct(ArrayList::class, void, Collection::class) {
+                                        aload_1
+                                        getfield(className, name, List::class)
+                                    }
+                                    putfield(className, name, List::class)
+                                }
+                                aload_0
+                                aload_1
+                                getfield(TARGET_BASE, "costume", int)
+                                putfield(TARGET_BASE, "costume", int)
+                                aload_0
+                                aload_1
+                                getfield(TARGET_BASE, "volume", double)
+                                putfield(TARGET_BASE, "volume", double)
+                                aload_0
+                                aload_1
+                                getfield(TARGET_BASE, "layerOrder", int)
+                                putfield(TARGET_BASE, "layerOrder", int)
+                                aload_0
+                                aload_1
+                                getfield(SPRITE_BASE, "x", double)
+                                putfield(SPRITE_BASE, "x", double)
+                                aload_0
+                                aload_1
+                                getfield(SPRITE_BASE, "y", double)
+                                putfield(SPRITE_BASE, "y", double)
+                                aload_0
+                                aload_1
+                                getfield(SPRITE_BASE, "size", double)
+                                putfield(SPRITE_BASE, "size", double)
+                                aload_0
+                                aload_1
+                                getfield(SPRITE_BASE, "direction", double)
+                                putfield(SPRITE_BASE, "direction", double)
+                                aload_0
+                                aload_1
+                                getfield(SPRITE_BASE, "draggable", boolean)
+                                putfield(SPRITE_BASE, "draggable", boolean)
+                                aload_0
+                                aload_1
+                                getfield(SPRITE_BASE, "rotationStyle", byte)
+                                putfield(SPRITE_BASE, "rotationStyle", byte)
+                                _return
+                            }
+                        }
+
+                        for (block in target.rootBlocks.values) {
+                            println(block.prettyPrint())
+                            method(public, escapeMethodName(block.id), int, int) {
+                                compileBlock(project.stage, target, block)
+                                iconst(SUSPEND_NO_RESCHEDULE)
+                                ireturn
+                            }
+                        }
+                    })
+                }
+
+                put(mainClassName, assembleClass(public + final, mainClassName) {
+                    init(private) {
                         _return
                     }
-                }
 
-                for (block in target.rootBlocks.values) {
-                    println(block.prettyPrint())
-                    method(public, escapeMethodName(block.id), int, int) {
-                        compileBlock(project.stage, target, block)
-                        iconst(SUSPEND_NO_RESCHEDULE)
-                        ireturn
+                    method(public + static, "main", void, Array<String>::class) {
+                        _return
                     }
-                }
-            })
-        }
-
-        add(assembleClass(public + final, escapePackageName("scratch", projectName, "Main")) {
-            init(private) {
-                _return
-            }
-
-            method(public + static, "main", void, Array<String>::class) {
-                _return
-            }
-        })
+                })
+            },
+            mainClassName, resources
+        )
     }
 
     private tailrec fun MethodAssembly.compileInput(

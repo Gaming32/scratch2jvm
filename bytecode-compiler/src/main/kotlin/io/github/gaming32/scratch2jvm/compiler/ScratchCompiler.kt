@@ -429,36 +429,19 @@ public class ScratchCompiler private constructor(
                     dconst_0
                 }
                 L.scope(this).also { l ->
-                    if (warp) {
-                        +l["repeat"]
+                    +l["repeat"]
+                    getState(indexState)
+                    getState(countState)
+                    dcmpg
+                    ifge(l["end"])
+                    compileInput(block.inputs.getValue("SUBSTACK"))
+                    setState(indexState) {
                         getState(indexState)
-                        getState(countState)
-                        dcmpl
-                        ifeq(l["end"])
-                        compileInput(block.inputs.getValue("SUBSTACK"))
-                        setState(indexState) {
-                            getState(indexState)
-                            dconst_1
-                            dadd
-                        }
-                        goto(l["repeat"])
-                        +l["end"]
-                    } else {
-                        val labelIndex = addAsyncLabel()
-                        getState(indexState)
-                        getState(countState)
-                        dcmpl
-                        ifeq(l["end"])
-                        compileInput(block.inputs.getValue("SUBSTACK"))
-                        setState(indexState) {
-                            getState(indexState)
-                            dconst_1
-                            dadd
-                        }
-                        push_int(labelIndex)
-                        ireturn
-                        +l["end"]
+                        dconst_1
+                        dadd
                     }
+                    goto(l["repeat"])
+                    +l["end"]
                 }
             }
             ScratchOpcodes.OPERATOR_ADD,

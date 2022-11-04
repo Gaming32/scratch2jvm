@@ -88,6 +88,7 @@ public final class ScratchABI {
         }
         final StringBuilder result = new StringBuilder();
         for (final String value : list) {
+            if (value.isEmpty()) continue;
             if (sep == 2) {
                 result.append(' ');
             } else if (sep == 1) {

@@ -346,7 +346,7 @@ public class ScratchCompiler private constructor(
 
     private tailrec fun MethodAssembly.compileInput(input: ScratchInput<*>, number: Boolean = false) {
         when (input.type) {
-            ScratchInputTypes.SUBVALUED -> compileBlock((input as ReferenceInput).value)
+            ScratchInputTypes.SUBVALUED -> return compileBlock((input as ReferenceInput).value, number)
             ScratchInputTypes.FALLBACK -> return compileInput((input as FallbackInput<*, *>).primary, number)
             ScratchInputTypes.VALUE -> {
                 val value = (input as ValueInput).value
@@ -388,7 +388,7 @@ public class ScratchCompiler private constructor(
                 }
                 invokestatic(SCRATCH_ABI, "listToString", String::class, List::class)
             }
-            ScratchInputTypes.BLOCK_STACK -> compileBlock((input as BlockStackInput).value)
+            ScratchInputTypes.BLOCK_STACK -> return compileBlock((input as BlockStackInput).value, number)
             else -> throw IllegalArgumentException("Don't know how to compile input ${input.type} yet")
         }
         if (number) {
@@ -411,7 +411,7 @@ public class ScratchCompiler private constructor(
         }
     }
 
-    private tailrec fun MethodAssembly.compileBlock(block: ScratchBlock) {
+    private tailrec fun MethodAssembly.compileBlock(block: ScratchBlock, number: Boolean = false) {
         when (block.opcode) {
             ScratchOpcodes.LOOKS_SAY -> {
                 aload_0
@@ -459,13 +459,17 @@ public class ScratchCompiler private constructor(
                     ScratchOpcodes.OPERATOR_MOD -> invokestatic(SCRATCH_ABI, "mod", double, double, double)
                     else -> throw AssertionError()
                 }
-                invokestatic(SCRATCH_ABI, "doubleToString", String::class, double)
+                if (!number) {
+                    invokestatic(SCRATCH_ABI, "doubleToString", String::class, double)
+                }
             }
             ScratchOpcodes.OPERATOR_RANDOM -> {
                 compileInput(block.inputs.getValue("FROM"), true)
                 compileInput(block.inputs.getValue("TO"), true)
                 invokestatic(SCRATCH_ABI, "random", double, double, double)
-                invokestatic(SCRATCH_ABI, "doubleToString", String::class, double)
+                if (!number) {
+                    invokestatic(SCRATCH_ABI, "doubleToString", String::class, double)
+                }
             }
             ScratchOpcodes.OPERATOR_JOIN -> {
                 compileInput(block.inputs.getValue("STRING1"))
@@ -480,7 +484,7 @@ public class ScratchCompiler private constructor(
             ScratchOpcodes.OPERATOR_LENGTH -> {
                 compileInput(block.inputs.getValue("STRING"))
                 invokevirtual(String::class, "length", int)
-                invokestatic(Int::class.javaObjectType, "toString", String::class, int)
+                coerceInt(number)
             }
             ScratchOpcodes.DATA_SETVARIABLETO -> {
                 val variable = block.fields.getValue("VARIABLE")
@@ -543,13 +547,56 @@ public class ScratchCompiler private constructor(
                 invokeinterface(List::class, "add", boolean, Any::class)
                 pop
             }
+            ScratchOpcodes.DATA_DELETEOFLIST -> {
+                getList(block.fields.getValue("LIST"))
+                compileInput(block.inputs.getValue("INDEX"), true)
+                invokestatic(SCRATCH_ABI, "deleteOfList", void, List::class, double)
+            }
             ScratchOpcodes.DATA_DELETEALLOFLIST -> {
                 getList(block.fields.getValue("LIST"))
                 invokeinterface(List::class, "clear", void)
             }
+            ScratchOpcodes.DATA_INSERTATLIST -> {
+                getList(block.fields.getValue("LIST"))
+                compileInput(block.inputs.getValue("INDEX"), true)
+                compileInput(block.inputs.getValue("ITEM"))
+                invokestatic(SCRATCH_ABI, "insertAtList", void, List::class, double, String::class)
+            }
+            ScratchOpcodes.DATA_REPLACEITEMOFLIST -> {
+                getList(block.fields.getValue("LIST"))
+                compileInput(block.inputs.getValue("INDEX"), true)
+                compileInput(block.inputs.getValue("ITEM"))
+                invokestatic(SCRATCH_ABI, "replaceItemOfList", void, List::class, double, String::class)
+            }
+            ScratchOpcodes.DATA_ITEMOFLIST -> {
+                getList(block.fields.getValue("LIST"))
+                compileInput(block.inputs.getValue("INDEX"), true)
+                invokestatic(SCRATCH_ABI, "itemOfList", String::class, List::class, double)
+            }
+            ScratchOpcodes.DATA_ITEMNUMOFLIST -> {
+                getList(block.fields.getValue("LIST"))
+                compileInput(block.inputs.getValue("ITEM"))
+                invokeinterface(List::class, "indexOf", int, Any::class)
+                iconst_1
+                iadd
+                coerceInt(number)
+            }
+            ScratchOpcodes.DATA_LENGTHOFLIST -> {
+                getList(block.fields.getValue("LIST"))
+                invokeinterface(List::class, "size", int)
+                coerceInt(number)
+            }
             else -> throw IllegalArgumentException("Don't know how to compile block ${block.opcode} yet")
         }
         block.next?.let { return compileBlock(it) }
+    }
+
+    private fun MethodAssembly.coerceInt(number: Boolean) {
+        if (number) {
+            i2d
+        } else {
+            invokestatic(Integer::class, "toString", String::class, int)
+        }
     }
 
     private fun newState(): Int {

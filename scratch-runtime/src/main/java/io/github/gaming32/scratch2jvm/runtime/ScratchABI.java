@@ -75,7 +75,35 @@ public final class ScratchABI {
         if (letter < 1 || letter > s.length()) {
             return "";
         }
-        return String.valueOf(s.charAt((int)letter - 1));
+        return String.valueOf(s.charAt((int)(letter - 1)));
+    }
+
+    public static void deleteOfList(List<String> list, double index) {
+        if (index < 1 || index > list.size()) {
+            return;
+        }
+        list.remove((int)(index - 1));
+    }
+
+    public static void insertAtList(List<String> list, double index, String value) {
+        if (index < 1 || index > list.size() + 1) {
+            return;
+        }
+        list.add((int)(index - 1), value);
+    }
+
+    public static void replaceItemOfList(List<String> list, double index, String value) {
+        if (index < 1 || index > list.size()) {
+            return;
+        }
+        list.add((int)(index - 1), value);
+    }
+
+    public static String itemOfList(List<String> list, double index) {
+        if (index < 1 || index > list.size()) {
+            return "";
+        }
+        return list.get((int)(index - 1));
     }
 
     public static String listToString(List<String> list) {
@@ -88,7 +116,6 @@ public final class ScratchABI {
         }
         final StringBuilder result = new StringBuilder();
         for (final String value : list) {
-            if (value.isEmpty()) continue;
             if (sep == 2) {
                 result.append(' ');
             } else if (sep == 1) {

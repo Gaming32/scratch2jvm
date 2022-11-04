@@ -25,7 +25,13 @@ public enum class ScratchOpcodes(public val id: String) {
     DATA_SETVARIABLETO("data_setvariableto"),
     DATA_CHANGEVARIABLEBY("data_changevariableby"),
     DATA_ADDTOLIST("data_addtolist"),
+    DATA_DELETEOFLIST("data_deleteoflist"),
     DATA_DELETEALLOFLIST("data_deletealloflist"),
+    DATA_INSERTATLIST("data_insertatlist"),
+    DATA_REPLACEITEMOFLIST("data_replaceitemoflist"),
+    DATA_ITEMOFLIST("data_itemoflist"),
+    DATA_ITEMNUMOFLIST("data_itemnumoflist"),
+    DATA_LENGTHOFLIST("data_lengthoflist"),
 
     PROCEDURES_DEFINITION("procedures_definition"),
     PROCEDURES_PROTOTYPE("procedures_prototype"),
@@ -78,7 +84,13 @@ public object VariablesOpcodes {
     public val SET_VARIABLE_TO: ScratchOpcodes = ScratchOpcodes.DATA_SETVARIABLETO
     public val CHANGE_VARIABLE_BY: ScratchOpcodes = ScratchOpcodes.DATA_CHANGEVARIABLEBY
     public val ADD_TO_LIST: ScratchOpcodes = ScratchOpcodes.DATA_ADDTOLIST
+    public val DELETE_OF_LIST: ScratchOpcodes = ScratchOpcodes.DATA_DELETEOFLIST
     public val DELETE_ALL_OF_LIST: ScratchOpcodes = ScratchOpcodes.DATA_DELETEALLOFLIST
+    public val INSERT_AT_LIST: ScratchOpcodes = ScratchOpcodes.DATA_INSERTATLIST
+    public val REPLACE_ITEM_OF_LIST: ScratchOpcodes = ScratchOpcodes.DATA_REPLACEITEMOFLIST
+    public val ITEM_OF_LIST: ScratchOpcodes = ScratchOpcodes.DATA_ITEMOFLIST
+    public val ITEM_NUM_OF_LIST: ScratchOpcodes = ScratchOpcodes.DATA_ITEMNUMOFLIST
+    public val LENGTH_OF_LIST: ScratchOpcodes = ScratchOpcodes.DATA_LENGTHOFLIST
 }
 
 public object MyBlocksOpcodes {

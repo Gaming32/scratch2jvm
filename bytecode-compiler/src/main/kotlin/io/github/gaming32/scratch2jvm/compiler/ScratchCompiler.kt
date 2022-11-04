@@ -274,17 +274,17 @@ public class ScratchCompiler private constructor(
                                 getfield(SCHEDULED_JOB, "label", int)
                                 tableswitch(
                                     0, labelIndex - 1, L["main_unknown_label"],
-                                    L["main_init_state"],
+                                    if (maxStateIndex != -1) L["main_init_state"] else L[0],
                                     *Array(labelIndex - 1) { L[it + 1] }
                                 )
-                                +L["main_init_state"]
                                 if (maxStateIndex != -1) {
+                                    +L["main_init_state"]
                                     aload_1
                                     push_int(maxStateIndex + 1)
                                     newarray(double)
                                     putfield(SCHEDULED_JOB, "state", DoubleArray::class)
+                                    goto(L[0])
                                 }
-                                goto(L[0])
                                 +L["main_unknown_label"]
                                 construct(Error::class, void, String::class) {
                                     construct(StringBuilder::class, void, String::class) {
@@ -484,7 +484,7 @@ public class ScratchCompiler private constructor(
             }
             ScratchOpcodes.DATA_SETVARIABLETO -> {
                 val variable = block.fields.getValue("VARIABLE")
-                val isLocal = variable.name in target.variables
+                val isLocal = variable.id in target.variables
                 var stageName = ""
                 if (isLocal) {
                     aload_0
@@ -505,7 +505,7 @@ public class ScratchCompiler private constructor(
             }
             ScratchOpcodes.DATA_CHANGEVARIABLEBY -> {
                 val variable = block.fields.getValue("VARIABLE")
-                val isLocal = variable.name in target.variables
+                val isLocal = variable.id in target.variables
                 var stageName = ""
                 if (isLocal) {
                     aload_0

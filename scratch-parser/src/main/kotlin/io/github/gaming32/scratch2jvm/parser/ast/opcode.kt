@@ -10,6 +10,7 @@ public enum class ScratchOpcodes(public val id: String) {
     CONTROL_REPEAT("control_repeat"),
     CONTROL_FOREVER("control_forever"),
     CONTROL_IF("control_if"),
+    CONTROL_STOP("control_stop"),
 
     OPERATOR_ADD("operator_add"),
     OPERATOR_SUBTRACT("operator_subtract"),
@@ -65,6 +66,7 @@ public object ControlOpcodes {
     public val REPEAT: ScratchOpcodes = ScratchOpcodes.CONTROL_REPEAT
     public val FOREVER: ScratchOpcodes = ScratchOpcodes.CONTROL_FOREVER
     public val IF: ScratchOpcodes = ScratchOpcodes.CONTROL_IF
+    public val STOP: ScratchOpcodes = ScratchOpcodes.CONTROL_STOP
 }
 
 public object OperatorsOpcodes {

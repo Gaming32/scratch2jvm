@@ -69,11 +69,17 @@ public final class AsyncScheduler {
         }
     }
 
+    public void cancelJobs(Target target, ScheduledJob excluding) {
+        final List<ScheduledJob> targetJobs = jobs.get(target);
+        targetJobs.clear();
+        targetJobs.add(excluding);
+    }
+
     public void runUntilComplete() {
         boolean hasJobs;
-        mainLoop:
         do {
             hasJobs = false;
+            targetsIter:
             for (int i = targets.size() - 1; i >= 0; i--) {
                 final Target target = targets.get(i);
                 final List<ScheduledJob> targetJobs = jobs.get(target);
@@ -85,11 +91,13 @@ public final class AsyncScheduler {
                     switch (state) {
                         case SUSPEND_NO_RESCHEDULE:
                             iter.remove();
+                            if (targetJobs.isEmpty()) continue targetsIter;
                             continue;
                         case SUSPEND_CANCEL_ALL:
-                            break mainLoop;
+                            return;
                     }
                     job.label = state;
+                    if (targetJobs.size() == 1) break targetsIter;
                 }
             }
         } while (hasJobs);

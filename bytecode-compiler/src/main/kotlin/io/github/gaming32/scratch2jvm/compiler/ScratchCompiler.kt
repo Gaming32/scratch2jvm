@@ -13,7 +13,6 @@ import codes.som.koffee.types.TypeLike
 import io.github.gaming32.scratch2jvm.parser.ast.*
 import io.github.gaming32.scratch2jvm.parser.data.ScratchProject
 import io.github.gaming32.scratch2jvm.parser.data.ScratchTarget
-import io.github.gaming32.scratch2jvm.parser.data.ScratchVariable
 import io.github.gaming32.scratch2jvm.parser.prettyPrint
 import org.objectweb.asm.Type
 import java.lang.invoke.*
@@ -396,7 +395,7 @@ public class ScratchCompiler private constructor(
         }
     }
 
-    private fun MethodAssembly.getList(variable: ScratchVariable) {
+    private fun MethodAssembly.getList(variable: ScratchBlock.BlockField) {
         if (variable.id in target.lists) {
             aload_0
             getfield(
@@ -443,6 +442,23 @@ public class ScratchCompiler private constructor(
                     goto(l["repeat"])
                     +l["end"]
                 }
+            }
+            ScratchOpcodes.CONTROL_STOP -> when (block.fields.getValue("STOP_OPTION").name) {
+                "all" -> {
+                    push_int(SUSPEND_CANCEL_ALL)
+                    ireturn
+                }
+                "this script" -> {
+                    push_int(SUSPEND_NO_RESCHEDULE)
+                    ireturn
+                }
+                "other scripts in sprite" -> {
+                    getstatic(SCRATCH_ABI, "SCHEDULER", ASYNC_SCHEDULER)
+                    aload_0
+                    aload_1
+                    invokevirtual(ASYNC_SCHEDULER, "cancelJobs", void, TARGET_BASE, SCHEDULED_JOB)
+                }
+                else -> throw IllegalArgumentException("Unknown control_stop STOP_OPTION")
             }
             ScratchOpcodes.OPERATOR_ADD,
             ScratchOpcodes.OPERATOR_SUBTRACT,

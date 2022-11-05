@@ -1,7 +1,10 @@
 package io.github.gaming32.scratch2jvm.parser.ast
 
 public enum class ScratchOpcodes(public val id: String) {
+    MOTION_GOTOXY("motion_gotoxy"),
+    MOTION_CHANGEXBY("motion_changexby"),
     MOTION_SETX("motion_setx"),
+    MOTION_XPOSITION("motion_xposition"),
 
     LOOKS_SAY("looks_say"),
 
@@ -19,6 +22,7 @@ public enum class ScratchOpcodes(public val id: String) {
     OPERATOR_DIVIDE("operator_divide"),
     OPERATOR_RANDOM("operator_random"),
     OPERATOR_GT("operator_gt"),
+    OPERATOR_EQUALS("operator_equals"),
     OPERATOR_JOIN("operator_join"),
     OPERATOR_LETTER_OF("operator_letter_of"),
     OPERATOR_LENGTH("operator_length"),
@@ -52,7 +56,10 @@ public enum class ScratchOpcodes(public val id: String) {
 }
 
 public object MotionOpcodes {
+    public val GOTO_X_Y: ScratchOpcodes = ScratchOpcodes.MOTION_GOTOXY
+    public val CHANGE_X_BY: ScratchOpcodes = ScratchOpcodes.MOTION_CHANGEXBY
     public val SET_X: ScratchOpcodes = ScratchOpcodes.MOTION_SETX
+    public val X_POSITION: ScratchOpcodes = ScratchOpcodes.MOTION_XPOSITION
 }
 
 public object LooksOpcodes {
@@ -78,6 +85,7 @@ public object OperatorsOpcodes {
     public val DIVIDE: ScratchOpcodes = ScratchOpcodes.OPERATOR_DIVIDE
     public val RANDOM: ScratchOpcodes = ScratchOpcodes.OPERATOR_RANDOM
     public val GT: ScratchOpcodes = ScratchOpcodes.OPERATOR_GT
+    public val EQUALS: ScratchOpcodes = ScratchOpcodes.OPERATOR_EQUALS
     public val JOIN: ScratchOpcodes = ScratchOpcodes.OPERATOR_JOIN
     public val LETTER_OF: ScratchOpcodes = ScratchOpcodes.OPERATOR_LETTER_OF
     public val LENGTH: ScratchOpcodes = ScratchOpcodes.OPERATOR_LENGTH

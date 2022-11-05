@@ -343,13 +343,20 @@ public class ScratchCompiler private constructor(
         )
     }
 
-    private tailrec fun MethodAssembly.compileInput(input: ScratchInput<*>, number: Boolean = false) {
+    private enum class CompileDataType {
+        DEFAULT, NUMBER, BOOLEAN
+    }
+
+    private tailrec fun MethodAssembly.compileInput(
+        input: ScratchInput<*>,
+        type: CompileDataType = CompileDataType.DEFAULT
+    ) {
         when (input.type) {
-            ScratchInputTypes.SUBVALUED -> return compileBlock((input as ReferenceInput).value, number)
-            ScratchInputTypes.FALLBACK -> return compileInput((input as FallbackInput<*, *>).primary, number)
+            ScratchInputTypes.SUBVALUED -> return compileBlock((input as ReferenceInput).value, type)
+            ScratchInputTypes.FALLBACK -> return compileInput((input as FallbackInput<*, *>).primary, type)
             ScratchInputTypes.VALUE -> {
                 val value = (input as ValueInput).value
-                if (number) {
+                if (type == CompileDataType.NUMBER) {
                     push_double(value.toDoubleOrNull() ?: 0.0)
                 } else {
                     ldc(value)
@@ -387,10 +394,10 @@ public class ScratchCompiler private constructor(
                 }
                 invokestatic(SCRATCH_ABI, "listToString", String::class, List::class)
             }
-            ScratchInputTypes.BLOCK_STACK -> return compileBlock((input as BlockStackInput).value, number)
+            ScratchInputTypes.BLOCK_STACK -> return compileBlock((input as BlockStackInput).value, type)
             else -> throw IllegalArgumentException("Don't know how to compile input ${input.type} yet")
         }
-        if (number) {
+        if (type == CompileDataType.NUMBER) {
             invokestatic(SCRATCH_ABI, "getNumber", double, String::class)
         }
     }
@@ -410,17 +417,65 @@ public class ScratchCompiler private constructor(
         }
     }
 
-    private tailrec fun MethodAssembly.compileBlock(block: ScratchBlock, number: Boolean = false) {
+    private tailrec fun MethodAssembly.compileBlock(
+        block: ScratchBlock,
+        type: CompileDataType = CompileDataType.DEFAULT
+    ) {
         when (block.opcode) {
+            ScratchOpcodes.MOTION_GOTOXY -> {
+                if (!target.isStage) {
+                    aload_0
+                    dup
+                    compileInput(block.inputs.getValue("X"), CompileDataType.NUMBER)
+                    putfield(SPRITE_BASE, "x", double)
+                    compileInput(block.inputs.getValue("Y"), CompileDataType.NUMBER)
+                    putfield(SPRITE_BASE, "y", double)
+                }
+            }
+            ScratchOpcodes.MOTION_CHANGEXBY -> {
+                if (!target.isStage) {
+                    aload_0
+                    dup
+                    getfield(SPRITE_BASE, "x", double)
+                    compileInput(block.inputs.getValue("DX"), CompileDataType.NUMBER)
+                    dadd
+                    putfield(SPRITE_BASE, "x", double)
+                }
+            }
+            ScratchOpcodes.MOTION_XPOSITION -> {
+                if (target.isStage) {
+                    if (type == CompileDataType.NUMBER) {
+                        push_double(0.0)
+                    } else {
+                        ldc("0")
+                    }
+                } else {
+                    aload_0
+                    getfield(SPRITE_BASE, "x", double)
+                    if (type != CompileDataType.NUMBER) {
+                        invokestatic(SCRATCH_ABI, "doubleToString", String::class, double)
+                    }
+                }
+            }
             ScratchOpcodes.LOOKS_SAY -> {
                 aload_0
                 compileInput(block.inputs.getValue("MESSAGE"))
                 invokestatic(SCRATCH_ABI, "say", void, TARGET_BASE, String::class)
             }
             ScratchOpcodes.EVENT_WHENFLAGCLICKED -> {}
+            ScratchOpcodes.CONTROL_FOREVER -> {
+                val label = addAsyncLabel()
+                compileInput(block.inputs.getValue("SUBSTACK"))
+                if (warp) {
+                    goto(L[label])
+                } else {
+                    push_int(label)
+                    ireturn
+                }
+            }
             ScratchOpcodes.CONTROL_WAIT -> {
                 aload_1
-                compileInput(block.inputs.getValue("DURATION"), true)
+                compileInput(block.inputs.getValue("DURATION"), CompileDataType.NUMBER)
                 invokestatic(SCRATCH_ABI, "wait", SCHEDULED_JOB, double)
                 putfield(SCHEDULED_JOB, "awaiting", SCHEDULED_JOB)
                 push_int(labelIndex)
@@ -431,7 +486,7 @@ public class ScratchCompiler private constructor(
                 val countState = newState()
                 val indexState = newState()
                 setState(countState) {
-                    compileInput(block.inputs.getValue("TIMES"), true)
+                    compileInput(block.inputs.getValue("TIMES"), CompileDataType.NUMBER)
                 }
                 setState(indexState) {
                     dconst_0
@@ -450,6 +505,14 @@ public class ScratchCompiler private constructor(
                     }
                     goto(l["repeat"])
                     +l["end"]
+                }
+            }
+            ScratchOpcodes.CONTROL_IF -> {
+                compileInput(block.inputs.getValue("CONDITION"), CompileDataType.BOOLEAN)
+                L.scope(this).also { l ->
+                    ifeq(l["condition_false"])
+                    compileInput(block.inputs.getValue("SUBSTACK"))
+                    +l["condition_false"]
                 }
             }
             ScratchOpcodes.CONTROL_STOP -> when (block.fields.getValue("STOP_OPTION").name) {
@@ -474,8 +537,8 @@ public class ScratchCompiler private constructor(
             ScratchOpcodes.OPERATOR_MULTIPLY,
             ScratchOpcodes.OPERATOR_DIVIDE,
             ScratchOpcodes.OPERATOR_MOD -> {
-                compileInput(block.inputs.getValue("NUM1"), true)
-                compileInput(block.inputs.getValue("NUM2"), true)
+                compileInput(block.inputs.getValue("NUM1"), CompileDataType.NUMBER)
+                compileInput(block.inputs.getValue("NUM2"), CompileDataType.NUMBER)
                 when (block.opcode) {
                     ScratchOpcodes.OPERATOR_ADD -> dadd
                     ScratchOpcodes.OPERATOR_SUBTRACT -> dsub
@@ -484,16 +547,26 @@ public class ScratchCompiler private constructor(
                     ScratchOpcodes.OPERATOR_MOD -> invokestatic(SCRATCH_ABI, "mod", double, double, double)
                     else -> throw AssertionError()
                 }
-                if (!number) {
+                if (type != CompileDataType.NUMBER) {
                     invokestatic(SCRATCH_ABI, "doubleToString", String::class, double)
                 }
             }
             ScratchOpcodes.OPERATOR_RANDOM -> {
-                compileInput(block.inputs.getValue("FROM"), true)
-                compileInput(block.inputs.getValue("TO"), true)
+                compileInput(block.inputs.getValue("FROM"), CompileDataType.NUMBER)
+                compileInput(block.inputs.getValue("TO"), CompileDataType.NUMBER)
                 invokestatic(SCRATCH_ABI, "random", double, double, double)
-                if (!number) {
+                if (type != CompileDataType.NUMBER) {
                     invokestatic(SCRATCH_ABI, "doubleToString", String::class, double)
+                }
+            }
+            ScratchOpcodes.OPERATOR_EQUALS -> {
+                if (type != CompileDataType.NUMBER) {
+                    compileInput(block.inputs.getValue("OPERAND1"))
+                    compileInput(block.inputs.getValue("OPERAND2"))
+                    invokevirtual(String::class, "equals", boolean, Any::class)
+                    if (type != CompileDataType.BOOLEAN) {
+                        invokestatic(Boolean::class.javaObjectType, "toString", String::class, boolean)
+                    }
                 }
             }
             ScratchOpcodes.OPERATOR_JOIN -> {
@@ -503,13 +576,13 @@ public class ScratchCompiler private constructor(
             }
             ScratchOpcodes.OPERATOR_LETTER_OF -> {
                 compileInput(block.inputs.getValue("STRING"))
-                compileInput(block.inputs.getValue("LETTER"), true)
+                compileInput(block.inputs.getValue("LETTER"), CompileDataType.NUMBER)
                 invokestatic(SCRATCH_ABI, "letterOf", String::class, String::class, double)
             }
             ScratchOpcodes.OPERATOR_LENGTH -> {
                 compileInput(block.inputs.getValue("STRING"))
                 invokevirtual(String::class, "length", int)
-                coerceInt(number)
+                coerceInt(type)
             }
             ScratchOpcodes.DATA_SETVARIABLETO -> {
                 val variable = block.fields.getValue("VARIABLE")
@@ -553,7 +626,7 @@ public class ScratchCompiler private constructor(
                     getfield(stageName, escapeUnqualifiedName(variable.name), String::class)
                 }
                 invokestatic(SCRATCH_ABI, "getNumber", double, String::class)
-                compileInput(block.inputs.getValue("VALUE"), true)
+                compileInput(block.inputs.getValue("VALUE"), CompileDataType.NUMBER)
                 dadd
                 invokestatic(SCRATCH_ABI, "doubleToString", String::class, double)
                 if (isLocal) {
@@ -574,7 +647,7 @@ public class ScratchCompiler private constructor(
             }
             ScratchOpcodes.DATA_DELETEOFLIST -> {
                 getList(block.fields.getValue("LIST"))
-                compileInput(block.inputs.getValue("INDEX"), true)
+                compileInput(block.inputs.getValue("INDEX"), CompileDataType.NUMBER)
                 invokestatic(SCRATCH_ABI, "deleteOfList", void, List::class, double)
             }
             ScratchOpcodes.DATA_DELETEALLOFLIST -> {
@@ -583,19 +656,19 @@ public class ScratchCompiler private constructor(
             }
             ScratchOpcodes.DATA_INSERTATLIST -> {
                 getList(block.fields.getValue("LIST"))
-                compileInput(block.inputs.getValue("INDEX"), true)
+                compileInput(block.inputs.getValue("INDEX"), CompileDataType.NUMBER)
                 compileInput(block.inputs.getValue("ITEM"))
                 invokestatic(SCRATCH_ABI, "insertAtList", void, List::class, double, String::class)
             }
             ScratchOpcodes.DATA_REPLACEITEMOFLIST -> {
                 getList(block.fields.getValue("LIST"))
-                compileInput(block.inputs.getValue("INDEX"), true)
+                compileInput(block.inputs.getValue("INDEX"), CompileDataType.NUMBER)
                 compileInput(block.inputs.getValue("ITEM"))
                 invokestatic(SCRATCH_ABI, "replaceItemOfList", void, List::class, double, String::class)
             }
             ScratchOpcodes.DATA_ITEMOFLIST -> {
                 getList(block.fields.getValue("LIST"))
-                compileInput(block.inputs.getValue("INDEX"), true)
+                compileInput(block.inputs.getValue("INDEX"), CompileDataType.NUMBER)
                 invokestatic(SCRATCH_ABI, "itemOfList", String::class, List::class, double)
             }
             ScratchOpcodes.DATA_ITEMNUMOFLIST -> {
@@ -604,24 +677,22 @@ public class ScratchCompiler private constructor(
                 invokeinterface(List::class, "indexOf", int, Any::class)
                 iconst_1
                 iadd
-                coerceInt(number)
+                coerceInt(type)
             }
             ScratchOpcodes.DATA_LENGTHOFLIST -> {
                 getList(block.fields.getValue("LIST"))
                 invokeinterface(List::class, "size", int)
-                coerceInt(number)
+                coerceInt(type)
             }
             else -> throw IllegalArgumentException("Don't know how to compile block ${block.opcode} yet")
         }
         block.next?.let { return compileBlock(it) }
     }
 
-    private fun MethodAssembly.coerceInt(number: Boolean) {
-        if (number) {
-            i2d
-        } else {
-            invokestatic(Integer::class, "toString", String::class, int)
-        }
+    private fun MethodAssembly.coerceInt(type: CompileDataType) = when (type) {
+        CompileDataType.DEFAULT -> invokestatic(Integer::class, "toString", String::class, int)
+        CompileDataType.NUMBER -> i2d
+        CompileDataType.BOOLEAN -> {}
     }
 
     private fun newState(): Int {

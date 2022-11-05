@@ -2,7 +2,8 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
     application
-    kotlin("jvm") version "1.7.20"
+    kotlin("jvm")
+    id("io.ktor.plugin") version "2.1.1" // It builds fat JARs
 }
 
 group = "io.github.gaming32.scratch2jvm"
@@ -15,15 +16,8 @@ application {
 tasks.withType<Jar> {
     manifest {
         attributes["Main-Class"] = application.mainClass.get()
+        attributes["Multi-Release"] = true
     }
-    from({
-        duplicatesStrategy = DuplicatesStrategy.INCLUDE
-        excludes += "module-info.class"
-        configurations.runtimeClasspath
-            .get()
-            .filter { it.name.endsWith("jar") }
-            .map { zipTree(it) }
-    })
 }
 
 repositories {

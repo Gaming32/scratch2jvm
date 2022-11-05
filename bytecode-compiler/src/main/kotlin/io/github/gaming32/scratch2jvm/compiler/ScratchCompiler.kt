@@ -38,6 +38,15 @@ public class ScratchCompiler private constructor(
             TARGET_BASE, STAGE_BASE, SPRITE_BASE
         )
 
+        private val REMAPPED_MATH_OPS = mapOf(
+            "ceiling" to "ceil",
+            "ln" to "log",
+            "log" to "log10",
+            "e ^" to "exp"
+        )
+        private val DEG_TO_RAD_OPS = setOf("sin", "cos", "tan")
+        private val RAD_TO_DEG_OPS = setOf("asin", "acos", "atan")
+
         @JvmStatic
         public fun compile(projectName: String, project: ScratchProject): CompilationResult =
             ScratchCompiler(projectName, project).compile()
@@ -515,7 +524,7 @@ public class ScratchCompiler private constructor(
                     +l["condition_false"]
                 }
             }
-            ScratchOpcodes.CONTROL_STOP -> when (block.fields.getValue("STOP_OPTION").name) {
+            ScratchOpcodes.CONTROL_STOP -> when (val stopOption = block.fields.getValue("STOP_OPTION").name) {
                 "all" -> {
                     push_int(SUSPEND_CANCEL_ALL)
                     ireturn
@@ -530,7 +539,7 @@ public class ScratchCompiler private constructor(
                     aload_1
                     invokevirtual(ASYNC_SCHEDULER, "cancelJobs", void, TARGET_BASE, SCHEDULED_JOB)
                 }
-                else -> throw IllegalArgumentException("Unknown control_stop STOP_OPTION")
+                else -> throw IllegalArgumentException("Unknown control_stop STOP_OPTION $stopOption")
             }
             ScratchOpcodes.OPERATOR_ADD,
             ScratchOpcodes.OPERATOR_SUBTRACT,
@@ -583,6 +592,27 @@ public class ScratchCompiler private constructor(
                 compileInput(block.inputs.getValue("STRING"))
                 invokevirtual(String::class, "length", int)
                 coerceInt(type)
+            }
+            ScratchOpcodes.OPERATOR_MATHOP -> {
+                val operator = block.fields.getValue("OPERATOR").name
+                if (operator == "10 ^") {
+                    push_double(10.0)
+                }
+                compileInput(block.inputs.getValue("NUM"), CompileDataType.NUMBER)
+                if (operator == "10 ^") {
+                    invokestatic(Math::class, "pow", double, double, double)
+                } else {
+                    if (operator in DEG_TO_RAD_OPS) {
+                        invokestatic(Math::class, "toRadians", double, double)
+                    }
+                    invokestatic(Math::class, REMAPPED_MATH_OPS[operator] ?: operator, double, double)
+                    if (operator in RAD_TO_DEG_OPS) {
+                        invokestatic(Math::class, "toDegrees", double, double)
+                    }
+                }
+                if (type != CompileDataType.NUMBER) {
+                    invokestatic(SCRATCH_ABI, "doubleToString", String::class, double)
+                }
             }
             ScratchOpcodes.DATA_SETVARIABLETO -> {
                 val variable = block.fields.getValue("VARIABLE")

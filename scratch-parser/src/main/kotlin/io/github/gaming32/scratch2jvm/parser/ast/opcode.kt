@@ -27,6 +27,7 @@ public enum class ScratchOpcodes(public val id: String) {
     OPERATOR_LETTER_OF("operator_letter_of"),
     OPERATOR_LENGTH("operator_length"),
     OPERATOR_MOD("operator_mod"),
+    OPERATOR_MATHOP("operator_mathop"),
 
     DATA_SETVARIABLETO("data_setvariableto"),
     DATA_CHANGEVARIABLEBY("data_changevariableby"),
@@ -90,6 +91,7 @@ public object OperatorsOpcodes {
     public val LETTER_OF: ScratchOpcodes = ScratchOpcodes.OPERATOR_LETTER_OF
     public val LENGTH: ScratchOpcodes = ScratchOpcodes.OPERATOR_LENGTH
     public val MOD: ScratchOpcodes = ScratchOpcodes.OPERATOR_MOD
+    public val MATH_OP: ScratchOpcodes = ScratchOpcodes.OPERATOR_MATHOP
 }
 
 public object VariablesOpcodes {

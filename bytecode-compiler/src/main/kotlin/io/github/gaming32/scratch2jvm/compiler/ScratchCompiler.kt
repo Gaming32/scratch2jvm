@@ -28,6 +28,10 @@ public class ScratchCompiler private constructor(
         public const val ASYNC_HANDLER: String = "$ASYNC_PACKAGE/AsyncHandler"
         public const val ASYNC_SCHEDULER: String = "$ASYNC_PACKAGE/AsyncScheduler"
         public const val SCHEDULED_JOB: String = "$ASYNC_PACKAGE/ScheduledJob"
+        private const val RENDERER_PACKAGE: String = "$RUNTIME_PACKAGE/renderer"
+        public const val SCRATCH_RENDERER: String = "$RENDERER_PACKAGE/ScratchRenderer"
+        public const val STUB_RENDERER: String = "$RENDERER_PACKAGE/StubRenderer"
+        public const val GL_RENDERER: String = "$RENDERER_PACKAGE/GlRenderer"
         private const val TARGET_PACKAGE: String = "$RUNTIME_PACKAGE/target"
         public const val TARGET_BASE: String = "$TARGET_PACKAGE/Target"
         public const val STAGE_BASE: String = "$TARGET_PACKAGE/Stage"
@@ -35,6 +39,7 @@ public class ScratchCompiler private constructor(
         public val USED_RUNTIME_CLASSES: List<String> = listOf(
             SCRATCH_ABI,
             ASYNC_HANDLER, ASYNC_SCHEDULER, SCHEDULED_JOB,
+            SCRATCH_RENDERER, STUB_RENDERER, GL_RENDERER,
             TARGET_BASE, STAGE_BASE, SPRITE_BASE
         )
 

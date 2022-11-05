@@ -2,6 +2,9 @@ package io.github.gaming32.scratch2jvm.runtime;
 
 import io.github.gaming32.scratch2jvm.runtime.async.AsyncScheduler;
 import io.github.gaming32.scratch2jvm.runtime.async.ScheduledJob;
+import io.github.gaming32.scratch2jvm.runtime.renderer.GlRenderer;
+import io.github.gaming32.scratch2jvm.runtime.renderer.ScratchRenderer;
+import io.github.gaming32.scratch2jvm.runtime.renderer.StubRenderer;
 import io.github.gaming32.scratch2jvm.runtime.target.Target;
 
 import java.io.BufferedReader;
@@ -14,8 +17,31 @@ import java.util.List;
 
 @SuppressWarnings("unused")
 public final class ScratchABI {
-    public static final boolean CONSOLE_MODE = Boolean.getBoolean("scratch.consoleMode");
+    public static final boolean HEADLESS;
+    public static final boolean DO_LOGGING;
     public static final AsyncScheduler SCHEDULER = new AsyncScheduler();
+    public static final ScratchRenderer RENDERER;
+
+    static {
+        boolean headless = Boolean.getBoolean("scratch.headless");
+        if (headless) {
+            RENDERER = new StubRenderer();
+        } else {
+            ScratchRenderer renderer;
+            try {
+                renderer = new GlRenderer();
+            } catch (Throwable t) {
+                System.err.println("[ERROR] Could not create GL renderer. Falling back to stub renderer.");
+                System.err.println("[ERROR] Use -Dscratch.headless=true to remove this error.");
+                t.printStackTrace();
+                renderer = new StubRenderer();
+                headless = true;
+            }
+            RENDERER = renderer;
+        }
+        HEADLESS = headless;
+        DO_LOGGING = HEADLESS || Boolean.getBoolean("scratch.logging");
+    }
 
     private ScratchABI() {
         throw new AssertionError();
@@ -44,10 +70,8 @@ public final class ScratchABI {
     }
 
     public static void say(Target target, String what) {
-        if (CONSOLE_MODE) {
+        if (DO_LOGGING) {
             System.out.println("SAY: " + target.name + ": " + what);
-        } else {
-            onlyImplementedInConsole("looks_say");
         }
     }
 
@@ -143,9 +167,5 @@ public final class ScratchABI {
             }
             return 0;
         });
-    }
-
-    private static void onlyImplementedInConsole(String opcode) {
-        throw new UnsupportedOperationException(opcode + " outside of console mode");
     }
 }

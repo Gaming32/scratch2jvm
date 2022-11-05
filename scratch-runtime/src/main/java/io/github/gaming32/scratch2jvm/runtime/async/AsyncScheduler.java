@@ -1,5 +1,6 @@
 package io.github.gaming32.scratch2jvm.runtime.async;
 
+import io.github.gaming32.scratch2jvm.runtime.ScratchABI;
 import io.github.gaming32.scratch2jvm.runtime.target.Target;
 
 import java.util.*;
@@ -99,7 +100,9 @@ public final class AsyncScheduler {
     }
 
     public void runUntilComplete() {
+        ScratchABI.RENDERER.init();
         boolean hasJobs;
+        mainLoop:
         do {
             hasJobs = false;
             targetsIter:
@@ -131,12 +134,14 @@ public final class AsyncScheduler {
                             continue;
                         case SUSPEND_CANCEL_ALL:
                             job.finished = true;
-                            return;
+                            break mainLoop;
                     }
                     job.label = state;
                     if (targetJobs.size() == 1) continue targetsIter;
                 }
             }
+            ScratchABI.RENDERER.render(this);
         } while (hasJobs);
+        ScratchABI.RENDERER.quit();
     }
 }

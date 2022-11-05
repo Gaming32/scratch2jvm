@@ -1,5 +1,4 @@
 plugins {
-    id("java")
 }
 
 group = "io.github.gaming32.scratch2jvm"

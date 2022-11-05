@@ -1,12 +1,30 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
-    id("java")
+    application
     kotlin("jvm") version "1.7.20"
 }
 
 group = "io.github.gaming32.scratch2jvm"
 version = "1.0-SNAPSHOT"
+
+application {
+    mainClass.set("io.github.gaming32.scratch2jvm.compiler.MainKt")
+}
+
+tasks.withType<Jar> {
+    manifest {
+        attributes["Main-Class"] = application.mainClass.get()
+    }
+    from({
+        duplicatesStrategy = DuplicatesStrategy.INCLUDE
+        excludes += "module-info.class"
+        configurations.runtimeClasspath
+            .get()
+            .filter { it.name.endsWith("jar") }
+            .map { zipTree(it) }
+    })
+}
 
 repositories {
     mavenCentral()

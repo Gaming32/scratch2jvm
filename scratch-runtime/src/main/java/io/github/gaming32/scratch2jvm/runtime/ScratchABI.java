@@ -1,6 +1,7 @@
 package io.github.gaming32.scratch2jvm.runtime;
 
 import io.github.gaming32.scratch2jvm.runtime.async.AsyncScheduler;
+import io.github.gaming32.scratch2jvm.runtime.async.ScheduledJob;
 import io.github.gaming32.scratch2jvm.runtime.target.Target;
 
 import java.io.BufferedReader;
@@ -132,6 +133,16 @@ public final class ScratchABI {
             return Long.toString(l);
         }
         return Double.toString(d);
+    }
+
+    public static ScheduledJob wait(double seconds) {
+        final long targetTime = System.nanoTime() + (long)(seconds * 1e9);
+        return new ScheduledJob((target, job) -> {
+            if (System.nanoTime() >= targetTime) {
+                return -1;
+            }
+            return 0;
+        });
     }
 
     private static void onlyImplementedInConsole(String opcode) {

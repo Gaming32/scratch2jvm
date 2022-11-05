@@ -59,20 +59,43 @@ public final class AsyncScheduler {
     }
 
     public void scheduleEvent(int event) {
+        for (final Target target : eventHandlers.keySet()) {
+            scheduleEvent(event, target);
+        }
+    }
+
+    public void scheduleEvent(int event, Target target) {
+        final List<AsyncHandler> handlers = eventHandlers.get(target)[event];
+        if (handlers == null) return;
+        final List<ScheduledJob> targetJobs = jobs.get(target);
+        for (final AsyncHandler handler : handlers) {
+            targetJobs.add(new ScheduledJob(handler));
+        }
+    }
+
+    public Set<ScheduledJob> scheduleEventAndList(int event) {
+        final Set<ScheduledJob> scheduled = new HashSet<>();
         for (final Map.Entry<Target, List<AsyncHandler>[]> entry : eventHandlers.entrySet()) {
             final List<AsyncHandler> handlers = entry.getValue()[event];
             if (handlers == null) continue;
             final List<ScheduledJob> targetJobs = jobs.get(entry.getKey());
             for (final AsyncHandler handler : handlers) {
-                targetJobs.add(new ScheduledJob(handler));
+                final ScheduledJob job = new ScheduledJob(handler);
+                targetJobs.add(job);
+                scheduled.add(job);
             }
         }
+        return scheduled;
     }
 
     public void cancelJobs(Target target, ScheduledJob excluding) {
-        final List<ScheduledJob> targetJobs = jobs.get(target);
-        targetJobs.clear();
-        targetJobs.add(excluding);
+        final Iterator<ScheduledJob> iter = jobs.get(target).iterator();
+        while (iter.hasNext()) {
+            final ScheduledJob job = iter.next();
+            if (job == excluding) continue;
+            job.finished = true;
+            iter.remove();
+        }
     }
 
     public void runUntilComplete() {
@@ -86,14 +109,28 @@ public final class AsyncScheduler {
                 hasJobs |= !targetJobs.isEmpty();
                 final Iterator<ScheduledJob> iter = targetJobs.iterator();
                 while (iter.hasNext()) {
-                    final ScheduledJob job = iter.next();
+                    ScheduledJob job = iter.next();
+                    ScheduledJob parentJob = null;
+                    while (job.awaiting != null && !job.awaiting.finished) {
+                        parentJob = job;
+                        job = job.awaiting;
+                    }
+                    if (job.awaiting != null) {
+                        job.awaiting = null;
+                    }
                     final int state = job.handler.handle(target, job);
                     switch (state) {
                         case SUSPEND_NO_RESCHEDULE:
-                            iter.remove();
-                            if (targetJobs.isEmpty()) continue targetsIter;
+                            job.finished = true;
+                            if (parentJob == null) {
+                                iter.remove();
+                                if (targetJobs.isEmpty()) continue targetsIter;
+                            } else {
+                                parentJob.awaiting = null;
+                            }
                             continue;
                         case SUSPEND_CANCEL_ALL:
+                            job.finished = true;
                             return;
                     }
                     job.label = state;

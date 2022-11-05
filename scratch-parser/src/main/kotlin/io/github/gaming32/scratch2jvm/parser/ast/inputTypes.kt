@@ -11,7 +11,7 @@ public enum class ScratchInputTypes(public vararg val ids: Int) {
     SUBVALUED(1),
     BLOCK_STACK(2),
     FALLBACK(3),
-    VALUE(4, 6, 7, 10),
+    VALUE(4, 5, 6, 7, 10),
     VARIABLE(12),
     LIST(13),
     ;

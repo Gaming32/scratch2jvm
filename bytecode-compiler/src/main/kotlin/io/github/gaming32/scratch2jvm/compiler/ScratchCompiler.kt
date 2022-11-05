@@ -418,6 +418,15 @@ public class ScratchCompiler private constructor(
                 invokestatic(SCRATCH_ABI, "say", void, TARGET_BASE, String::class)
             }
             ScratchOpcodes.EVENT_WHENFLAGCLICKED -> {}
+            ScratchOpcodes.CONTROL_WAIT -> {
+                aload_1
+                compileInput(block.inputs.getValue("DURATION"), true)
+                invokestatic(SCRATCH_ABI, "wait", SCHEDULED_JOB, double)
+                putfield(SCHEDULED_JOB, "awaiting", SCHEDULED_JOB)
+                push_int(labelIndex)
+                ireturn
+                addAsyncLabel()
+            }
             ScratchOpcodes.CONTROL_REPEAT -> {
                 val countState = newState()
                 val indexState = newState()

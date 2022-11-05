@@ -7,6 +7,7 @@ public enum class ScratchOpcodes(public val id: String) {
 
     EVENT_WHENFLAGCLICKED("event_whenflagclicked"),
 
+    CONTROL_WAIT("control_wait"),
     CONTROL_REPEAT("control_repeat"),
     CONTROL_FOREVER("control_forever"),
     CONTROL_IF("control_if"),
@@ -63,6 +64,7 @@ public object EventsOpcodes {
 }
 
 public object ControlOpcodes {
+    public val WAIT: ScratchOpcodes = ScratchOpcodes.CONTROL_WAIT
     public val REPEAT: ScratchOpcodes = ScratchOpcodes.CONTROL_REPEAT
     public val FOREVER: ScratchOpcodes = ScratchOpcodes.CONTROL_FOREVER
     public val IF: ScratchOpcodes = ScratchOpcodes.CONTROL_IF

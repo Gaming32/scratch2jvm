@@ -134,7 +134,7 @@ public final class AsyncScheduler {
                             return;
                     }
                     job.label = state;
-                    if (targetJobs.size() == 1) break targetsIter;
+                    if (targetJobs.size() == 1) continue targetsIter;
                 }
             }
         } while (hasJobs);

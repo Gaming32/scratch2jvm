@@ -15,5 +15,5 @@ public fun main(vararg args: String) {
         File(sb3In.path.substringBeforeLast('.') + ".jar")
     }
     jarOut.parentFile.mkdirs()
-    compileToJar(sb3In, jarOut)
+    compileToJar(sb3In, jarOut, FatnessLevel.NATIVES)
 }

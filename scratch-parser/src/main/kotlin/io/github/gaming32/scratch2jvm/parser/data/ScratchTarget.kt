@@ -36,16 +36,14 @@ public data class ScratchTarget(
         ): ScratchTarget {
             val variables = data["variables"]
                 .asJsonObject
-                .asMap()
-                .entries
+                .entrySet()
                 .associate { (id, variable) ->
                     id to ScratchVariable.fromJson(id, variable.asJsonArray)
                 }
             val scopedVariables = stageVariables + variables
             val lists = data["lists"]
                 .asJsonObject
-                .asMap()
-                .entries
+                .entrySet()
                 .associate { (id, variable) ->
                     id to ScratchList.fromJson(id, variable.asJsonArray)
                 }

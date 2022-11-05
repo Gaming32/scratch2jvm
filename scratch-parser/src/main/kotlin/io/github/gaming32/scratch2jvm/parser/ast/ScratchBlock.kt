@@ -23,8 +23,7 @@ public class ScratchBlock(
             y = data["y"]?.asInt ?: 0,
             fields = data["fields"]
                 .asJsonObject
-                .asMap()
-                .entries
+                .entrySet()
                 .associate { (key, value) ->
                     value as JsonArray
                     key to BlockField(value[0].asString, value[1].asNullableString)

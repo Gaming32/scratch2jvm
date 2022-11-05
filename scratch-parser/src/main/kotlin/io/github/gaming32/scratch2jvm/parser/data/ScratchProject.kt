@@ -6,8 +6,7 @@ import kotlin.reflect.KProperty1
 
 public class ScratchProject(root: JsonObject) : PrettyPrintable {
     public val meta: Map<String, String> = root.getAsJsonObject("meta")
-        .asMap()
-        .entries
+        .entrySet()
         .associate { it.key to it.value.asString }
 
     public val monitors: Map<String, ScratchMonitor> = root.getAsJsonArray("monitors")

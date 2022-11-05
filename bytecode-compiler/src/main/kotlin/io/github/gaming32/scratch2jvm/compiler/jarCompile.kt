@@ -16,22 +16,33 @@ import kotlin.io.path.createDirectories
 import kotlin.io.path.createDirectory
 import kotlin.io.path.outputStream
 import kotlin.io.path.writer
+import kotlin.time.Duration.Companion.nanoseconds
+import kotlin.time.DurationUnit
 
 public enum class FatnessLevel {
     NONE, RUNTIME, LWJGL, NATIVES
 }
 
+private val LOGGER = getLogger()
+
 public fun compileToJar(inFile: File, outFile: File, fatness: FatnessLevel = FatnessLevel.RUNTIME) {
+    val mainStart = System.nanoTime()
     outFile.delete()
     ScratchProjectFile.open(inFile).use { project ->
+        LOGGER.info("Compiling {}...", inFile.nameWithoutExtension)
+        val start = System.nanoTime()
         val result = ScratchCompiler.compile(inFile.nameWithoutExtension, project.project)
+        val end = System.nanoTime()
+        LOGGER.info("Finished compilation in {}ms", (end - start).nanoseconds.toDouble(DurationUnit.MILLISECONDS))
         FileSystems.newFileSystem(URI("jar:" + outFile.toURI()), mapOf("create" to "true")).use { outJar ->
+            LOGGER.info("Writing assets")
             for (entry in project.scratchZip.entries()) {
                 if (entry.name == "project.json") continue
                 project.scratchZip.getInputStream(entry).use {
                     Files.copy(it, outJar.getPath(entry.name), StandardCopyOption.REPLACE_EXISTING)
                 }
             }
+            LOGGER.info("Writing classes")
             for ((name, clazz) in result.classes) {
                 val writer = ClassWriter(ClassWriter.COMPUTE_FRAMES)
                 clazz.accept(writer)
@@ -41,22 +52,27 @@ public fun compileToJar(inFile: File, outFile: File, fatness: FatnessLevel = Fat
                     it.write(writer.toByteArray())
                 }
             }
+            LOGGER.info("Writing resources")
             for ((name, data) in result.resources) {
                 val destPath = outJar.getPath(name)
                 destPath.writer(Charsets.UTF_8).use {
                     it.write(data)
                 }
             }
+            LOGGER.info("Writing data")
             outJar.getPath("META-INF").createDirectory()
             outJar.getPath("META-INF/MANIFEST.MF").writer(Charsets.UTF_8).use {
                 it.write("Manifest-Version: 1.0\n")
                 it.write("Main-Class: ${result.mainClass.replace('/', '.')}\n")
             }
             if (fatness >= FatnessLevel.RUNTIME) {
+                LOGGER.info("Writing runtime")
                 copyPackageToJar("io.github.gaming32.scratch2jvm.runtime", outJar)
                 if (fatness >= FatnessLevel.LWJGL) {
+                    LOGGER.info("Writing LWJGL")
                     copyPackageToJar("org.lwjgl", outJar)
                     if (fatness >= FatnessLevel.NATIVES) {
+                        LOGGER.info("Writing LWJGL natives")
                         Reflections(Scanners.Resources).get(
                             Scanners.Resources.with(".*lwjgl.*")
                         ).forEach { resource ->
@@ -70,8 +86,11 @@ public fun compileToJar(inFile: File, outFile: File, fatness: FatnessLevel = Fat
                     }
                 }
             }
+            LOGGER.info("Building final JAR")
         }
     }
+    val mainEnd = System.nanoTime()
+    LOGGER.info("Finished in {}ms", (mainEnd - mainStart).nanoseconds.toDouble(DurationUnit.MILLISECONDS))
 }
 
 private fun copyPackageToJar(pkg: String, jar: FileSystem) =

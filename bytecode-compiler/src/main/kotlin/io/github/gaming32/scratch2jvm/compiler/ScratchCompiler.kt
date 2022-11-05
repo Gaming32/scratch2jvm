@@ -52,6 +52,8 @@ public class ScratchCompiler private constructor(
         private val DEG_TO_RAD_OPS = setOf("sin", "cos", "tan")
         private val RAD_TO_DEG_OPS = setOf("asin", "acos", "atan")
 
+        private val LOGGER = getLogger()
+
         @JvmStatic
         public fun compile(projectName: String, project: ScratchProject): CompilationResult =
             ScratchCompiler(projectName, project).compile()
@@ -271,7 +273,9 @@ public class ScratchCompiler private constructor(
                         val events = mutableListOf<Pair<String, Int>>()
 
                         for (block in target.rootBlocks.values) {
-                            println(block.prettyPrint())
+                            if (LOGGER.isTraceEnabled) {
+                                LOGGER.trace(block.prettyPrint().toString())
+                            }
                             method(public, escapeMethodName(block.id), int, SCHEDULED_JOB) {
                                 this@ScratchCompiler.target = target
                                 stateIndex = 0

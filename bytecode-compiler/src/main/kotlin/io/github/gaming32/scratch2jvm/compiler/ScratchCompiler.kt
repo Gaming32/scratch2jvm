@@ -546,6 +546,12 @@ public class ScratchCompiler private constructor(
                     invokevirtual(SPRITE_BASE, "setDirection", void, double)
                 }
             }
+            ScratchOpcodes.MOTION_POINTTOWARDS -> {
+                if (!target.isStage) {
+                    aload_0
+                    invokevirtual(SPRITE_BASE, "pointTowardsMouse", void)
+                }
+            }
             ScratchOpcodes.MOTION_SETX,
             ScratchOpcodes.MOTION_SETY -> {
                 if (!target.isStage) {

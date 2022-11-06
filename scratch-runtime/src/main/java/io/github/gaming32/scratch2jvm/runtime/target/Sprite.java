@@ -36,6 +36,13 @@ public abstract class Sprite extends Target {
         this.direction = direction > 180 ? direction - 360 : direction;
     }
 
+    public final void pointTowardsMouse() {
+        final double[] xBuf = new double[1];
+        final double[] yBuf = new double[1];
+        ScratchABI.RENDERER.getMousePos(xBuf, yBuf);
+        direction = Math.toDegrees(Math.atan2(xBuf[0] - x, yBuf[0] - y));
+    }
+
     public final void gotoMousePosition() {
         final double[] xBuf = new double[1];
         final double[] yBuf = new double[1];

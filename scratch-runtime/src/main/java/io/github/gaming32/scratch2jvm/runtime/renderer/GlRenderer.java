@@ -30,7 +30,9 @@ import java.util.function.Function;
 import static org.lwjgl.glfw.Callbacks.glfwFreeCallbacks;
 import static org.lwjgl.glfw.GLFW.*;
 import static org.lwjgl.nanovg.NanoSVG.*;
+import static org.lwjgl.nanovg.NanoVGGL2.*;
 import static org.lwjgl.opengl.GL11.*;
+import static org.lwjgl.opengl.GL13.GL_MULTISAMPLE;
 
 public final class GlRenderer implements ScratchRenderer {
     private static final double IDEAL_ASPECT = 480.0 / 360.0;
@@ -44,6 +46,7 @@ public final class GlRenderer implements ScratchRenderer {
     private int boundTex = -1;
     private long window;
     private double graphicsScale;
+    private long nanovg;
     private long rasterizer;
     private double lastTime;
 
@@ -56,9 +59,9 @@ public final class GlRenderer implements ScratchRenderer {
             throw new RuntimeException("Failed to initialize GLFW");
         }
 
-        rasterizer = nsvgCreateRasterizer();
-
         glfwDefaultWindowHints();
+        glfwWindowHint(GLFW_SAMPLES, 4);
+
         final long monitor = glfwGetPrimaryMonitor();
         final GLFWVidMode videoMode = glfwGetVideoMode(monitor);
         if (videoMode == null) {
@@ -78,10 +81,14 @@ public final class GlRenderer implements ScratchRenderer {
         setViewport();
 
         glDisable(GL_DEPTH_TEST);
+        glEnable(GL_MULTISAMPLE);
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
         glClearColor(1, 1, 1, 1);
+
+        nanovg = nvgCreate(NVG_ANTIALIAS);
+        rasterizer = nsvgCreateRasterizer();
     }
 
     private void setViewport() {
@@ -192,11 +199,9 @@ public final class GlRenderer implements ScratchRenderer {
                     throw new RuntimeException(e);
                 }
                 costume.width = width = image.getWidth();
-                costume.height = height = image.getWidth();
+                costume.height = height = image.getHeight();
                 rgba = MemoryUtil.memAlloc(width * height * 4).order(ByteOrder.BIG_ENDIAN);
-                final int[] argb = new int[width * height];
-                image.getRGB(0, 0, width, height, argb, 0, width);
-                for (int pixel : argb) {
+                for (int pixel : image.getRGB(0, 0, width, height, null, 0, width)) {
                     rgba.putInt((pixel << 8) | (pixel >>> 24));
                 }
                 rgba.flip();
@@ -292,6 +297,7 @@ public final class GlRenderer implements ScratchRenderer {
         glfwFreeCallbacks(window);
         glfwDestroyWindow(window);
         glfwTerminate();
+        nvgDelete(nanovg);
         nsvgDeleteRasterizer(rasterizer);
         Objects.requireNonNull(glfwSetErrorCallback(null)).free();
     }

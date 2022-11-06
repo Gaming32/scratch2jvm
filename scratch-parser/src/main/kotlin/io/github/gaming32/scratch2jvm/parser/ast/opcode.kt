@@ -8,6 +8,8 @@ public enum class ScratchOpcodes(public val id: String) {
     MOTION_GLIDETO_MENU("motion_glideto_menu"),
     MOTION_GLIDESECSTOXY("motion_glidesecstoxy"),
     MOTION_POINTINDIRECTION("motion_pointindirection"),
+    MOTION_POINTTOWARDS("motion_pointtowards"),
+    MOTION_POINTTOWARDS_MENU("motion_pointtowards_menu"),
     MOTION_CHANGEXBY("motion_changexby"),
     MOTION_SETX("motion_setx"),
     MOTION_CHANGEYBY("motion_changeyby"),
@@ -83,6 +85,7 @@ public object MotionOpcodes {
     public val GLIDE_TO: ScratchOpcodes = ScratchOpcodes.MOTION_GLIDETO
     public val GLIDE_SECS_TO_X_Y: ScratchOpcodes = ScratchOpcodes.MOTION_GLIDESECSTOXY
     public val POINT_IN_DIRECTION: ScratchOpcodes = ScratchOpcodes.MOTION_POINTINDIRECTION
+    public val POINT_TOWARDS: ScratchOpcodes = ScratchOpcodes.MOTION_POINTTOWARDS
     public val CHANGE_X_BY: ScratchOpcodes = ScratchOpcodes.MOTION_CHANGEXBY
     public val SET_X: ScratchOpcodes = ScratchOpcodes.MOTION_SETX
     public val CHANGE_Y_BY: ScratchOpcodes = ScratchOpcodes.MOTION_CHANGEYBY

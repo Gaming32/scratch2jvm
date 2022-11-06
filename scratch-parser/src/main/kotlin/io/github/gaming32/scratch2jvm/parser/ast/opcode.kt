@@ -2,6 +2,7 @@ package io.github.gaming32.scratch2jvm.parser.ast
 
 public enum class ScratchOpcodes(public val id: String) {
     MOTION_GOTO("motion_goto"),
+    MOTION_GOTO_MENU("motion_goto_menu"),
     MOTION_GOTOXY("motion_gotoxy"),
     MOTION_GLIDETO("motion_glideto"),
     MOTION_GLIDETO_MENU("motion_glideto_menu"),
@@ -21,8 +22,12 @@ public enum class ScratchOpcodes(public val id: String) {
     CONTROL_REPEAT("control_repeat"),
     CONTROL_FOREVER("control_forever"),
     CONTROL_IF("control_if"),
+    CONTROL_IF_ELSE("control_if_else"),
+    CONTROL_WAIT_UNTIL("control_wait_until"),
     CONTROL_STOP("control_stop"),
 
+    SENSING_KEYPRESSED("sensing_keypressed"),
+    SENSING_KEYOPTIONS("sensing_keyoptions"),
     SENSING_MOUSEDOWN("sensing_mousedown"),
 
     OPERATOR_ADD("operator_add"),
@@ -33,6 +38,7 @@ public enum class ScratchOpcodes(public val id: String) {
     OPERATOR_GT("operator_gt"),
     OPERATOR_LT("operator_lt"),
     OPERATOR_EQUALS("operator_equals"),
+    OPERATOR_NOT("operator_not"),
     OPERATOR_JOIN("operator_join"),
     OPERATOR_LETTER_OF("operator_letter_of"),
     OPERATOR_LENGTH("operator_length"),
@@ -70,7 +76,6 @@ public object MotionOpcodes {
     public val GOTO: ScratchOpcodes = ScratchOpcodes.MOTION_GOTO
     public val GOTO_X_Y: ScratchOpcodes = ScratchOpcodes.MOTION_GOTOXY
     public val GLIDE_TO: ScratchOpcodes = ScratchOpcodes.MOTION_GLIDETO
-    public val GLIDE_TO_MENU: ScratchOpcodes = ScratchOpcodes.MOTION_GLIDETO_MENU
     public val GLIDE_SECS_TO_X_Y: ScratchOpcodes = ScratchOpcodes.MOTION_GLIDESECSTOXY
     public val CHANGE_X_BY: ScratchOpcodes = ScratchOpcodes.MOTION_CHANGEXBY
     public val SET_X: ScratchOpcodes = ScratchOpcodes.MOTION_SETX
@@ -97,6 +102,7 @@ public object ControlOpcodes {
 }
 
 public object SensingOpcodes {
+    public val KEY_PRESSED: ScratchOpcodes = ScratchOpcodes.SENSING_KEYPRESSED
     public val MOUSE_DOWN: ScratchOpcodes = ScratchOpcodes.SENSING_MOUSEDOWN
 }
 

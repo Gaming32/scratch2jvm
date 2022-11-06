@@ -19,4 +19,6 @@ public interface ScratchRenderer {
     boolean isMouseDown();
 
     void getMousePos(double[] xBuf, double[] yBuf);
+
+    boolean keyPressed(int glfwKey);
 }

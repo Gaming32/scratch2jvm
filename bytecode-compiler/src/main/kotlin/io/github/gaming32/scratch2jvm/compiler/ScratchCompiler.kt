@@ -489,7 +489,7 @@ public class ScratchCompiler private constructor(
                         val toBlock = (block.inputs.getValue("TO") as ReferenceInput).value
                         when (toBlock.fields.getValue("TO").name) {
                             "_mouse_" -> {
-                                invokevirtual(SPRITE_BASE, "gotoMousePosition", SCHEDULED_JOB, double)
+                                invokevirtual(SPRITE_BASE, "gotoMousePosition", void)
                             }
                             "_random_" -> {
                                 push_double(-240.0)
@@ -498,13 +498,13 @@ public class ScratchCompiler private constructor(
                                 push_double(-180.0)
                                 push_double(180.0)
                                 invokestatic(SCRATCH_ABI, "random", double, double, double)
-                                invokevirtual(SPRITE_BASE, "setXY", SCHEDULED_JOB, double, double)
+                                invokevirtual(SPRITE_BASE, "setXY", void, double, double)
                             }
                         }
                     } else {
                         compileInput(block.inputs.getValue("X"), CompileDataType.NUMBER)
                         compileInput(block.inputs.getValue("Y"), CompileDataType.NUMBER)
-                        invokevirtual(SPRITE_BASE, "setXY", SCHEDULED_JOB, double, double)
+                        invokevirtual(SPRITE_BASE, "setXY", void, double, double)
                     }
                 }
             }
@@ -630,6 +630,27 @@ public class ScratchCompiler private constructor(
                     +l["condition_false"]
                 }
             }
+            ScratchOpcodes.CONTROL_IF_ELSE -> {
+                compileInput(block.inputs.getValue("CONDITION"), CompileDataType.BOOLEAN)
+                L.scope(this).also { l ->
+                    ifeq(l["condition_false"])
+                    compileInput(block.inputs.getValue("SUBSTACK"))
+                    goto(l["if_end"])
+                    +l["condition_false"]
+                    compileInput(block.inputs.getValue("SUBSTACK2"))
+                    +l["if_end"]
+                }
+            }
+            ScratchOpcodes.CONTROL_WAIT_UNTIL -> {
+                val label = addAsyncLabel()
+                compileInput(block.inputs.getValue("CONDITION"), CompileDataType.BOOLEAN)
+                L.scope(this).also { l ->
+                    ifne(l["wait_end"])
+                    push_int(label)
+                    ireturn
+                    +l["wait_end"]
+                }
+            }
             ScratchOpcodes.CONTROL_STOP -> when (val stopOption = block.fields.getValue("STOP_OPTION").name) {
                 "all" -> {
                     push_int(SUSPEND_CANCEL_ALL)
@@ -646,6 +667,16 @@ public class ScratchCompiler private constructor(
                     invokevirtual(ASYNC_SCHEDULER, "cancelJobs", void, TARGET_BASE, SCHEDULED_JOB)
                 }
                 else -> throw IllegalArgumentException("Unknown control_stop STOP_OPTION $stopOption")
+            }
+            ScratchOpcodes.SENSING_KEYPRESSED -> {
+                getstatic(SCRATCH_ABI, "RENDERER", SCRATCH_RENDERER)
+                val keyOptionBlock = (block.inputs.getValue("KEY_OPTION") as ReferenceInput).value
+                val keyOption = keyOptionBlock.fields.getValue("KEY_OPTION").name
+                push_int(EXTRA_KEYS[keyOption] ?: keyOption[0].code)
+                invokeinterface(SCRATCH_RENDERER, "keyPressed", boolean, int)
+                if (type != CompileDataType.BOOLEAN) {
+                    invokestatic(Boolean::class.javaObjectType, "toString", String::class, boolean)
+                }
             }
             ScratchOpcodes.SENSING_MOUSEDOWN -> {
                 getstatic(SCRATCH_ABI, "RENDERER", SCRATCH_RENDERER)
@@ -693,6 +724,14 @@ public class ScratchCompiler private constructor(
                     else -> throw AssertionError()
                 })
                 invokestatic(SCRATCH_ABI, "compareValues", boolean, String::class, String::class, int)
+                if (type != CompileDataType.BOOLEAN) {
+                    invokestatic(Boolean::class.javaObjectType, "toString", String::class, boolean)
+                }
+            }
+            ScratchOpcodes.OPERATOR_NOT -> {
+                iconst_1
+                compileInput(block.inputs.getValue("OPERAND"), CompileDataType.BOOLEAN)
+                isub
                 if (type != CompileDataType.BOOLEAN) {
                     invokestatic(Boolean::class.javaObjectType, "toString", String::class, boolean)
                 }
@@ -833,7 +872,7 @@ public class ScratchCompiler private constructor(
                 invokeinterface(List::class, "size", int)
                 coerceInt(type)
             }
-            else -> throw IllegalArgumentException("Don't know how to compile block ${block.opcode} yet")
+            else -> throw IllegalArgumentException("Don't know how to compile block ${block.opcode}")
         }
         block.next?.let { return compileBlock(it) }
     }

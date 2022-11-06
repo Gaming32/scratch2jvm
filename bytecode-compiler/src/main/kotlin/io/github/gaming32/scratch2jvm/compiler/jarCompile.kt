@@ -45,7 +45,13 @@ public fun compileToJar(inFile: File, outFile: File, fatness: FatnessLevel = Fat
             LOGGER.info("Writing classes")
             for ((name, clazz) in result.classes) {
                 val writer = ClassWriter(ClassWriter.COMPUTE_FRAMES)
+//                val writer = ClassWriter(ClassWriter.COMPUTE_MAXS)
                 clazz.accept(writer)
+//                if ("Sprite1" in name) {
+//                    PrintWriter("test.txt").use {
+//                        CheckClassAdapter.verify(ClassReader(writer.toByteArray()), true, it)
+//                    }
+//                }
                 val destPath = outJar.getPath("$name.class")
                 destPath.parent.createDirectories()
                 destPath.outputStream().use {

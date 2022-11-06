@@ -290,7 +290,6 @@ public final class GlRenderer implements ScratchRenderer {
         }
         return false;
     }
-
     @Override
     public void getMousePos(double[] xBuf, double[] yBuf) {
         glfwGetCursorPos(window, xBuf, yBuf);
@@ -300,5 +299,10 @@ public final class GlRenderer implements ScratchRenderer {
         if (yBuf != null) {
             yBuf[0] = 180.0 - (yBuf[0] - barSize.y) / graphicsScale;
         }
+    }
+
+    @Override
+    public boolean keyPressed(int glfwKey) {
+        return glfwGetKey(window, glfwKey) == GLFW_PRESS;
     }
 }

@@ -40,4 +40,9 @@ public final class StubRenderer implements ScratchRenderer {
             yBuf[0] = 0;
         }
     }
+
+    @Override
+    public boolean keyPressed(int glfwKey) {
+        return false;
+    }
 }

@@ -38,6 +38,8 @@ public enum class ScratchOpcodes(public val id: String) {
     OPERATOR_GT("operator_gt"),
     OPERATOR_LT("operator_lt"),
     OPERATOR_EQUALS("operator_equals"),
+    OPERATOR_AND("operator_and"),
+    OPERATOR_OR("operator_or"),
     OPERATOR_NOT("operator_not"),
     OPERATOR_JOIN("operator_join"),
     OPERATOR_LETTER_OF("operator_letter_of"),
@@ -115,6 +117,9 @@ public object OperatorsOpcodes {
     public val GT: ScratchOpcodes = ScratchOpcodes.OPERATOR_GT
     public val LT: ScratchOpcodes = ScratchOpcodes.OPERATOR_LT
     public val EQUALS: ScratchOpcodes = ScratchOpcodes.OPERATOR_EQUALS
+    public val AND: ScratchOpcodes = ScratchOpcodes.OPERATOR_AND
+    public val OR: ScratchOpcodes = ScratchOpcodes.OPERATOR_OR
+    public val NOT: ScratchOpcodes = ScratchOpcodes.OPERATOR_NOT
     public val JOIN: ScratchOpcodes = ScratchOpcodes.OPERATOR_JOIN
     public val LETTER_OF: ScratchOpcodes = ScratchOpcodes.OPERATOR_LETTER_OF
     public val LENGTH: ScratchOpcodes = ScratchOpcodes.OPERATOR_LENGTH

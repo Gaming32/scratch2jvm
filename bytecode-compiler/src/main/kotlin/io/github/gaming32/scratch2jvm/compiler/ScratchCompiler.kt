@@ -728,6 +728,19 @@ public class ScratchCompiler private constructor(
                     invokestatic(Boolean::class.javaObjectType, "toString", String::class, boolean)
                 }
             }
+            ScratchOpcodes.OPERATOR_AND,
+            ScratchOpcodes.OPERATOR_OR -> {
+                compileInput(block.inputs.getValue("OPERAND1"), CompileDataType.BOOLEAN)
+                compileInput(block.inputs.getValue("OPERAND2"), CompileDataType.BOOLEAN)
+                if (block.opcode == ScratchOpcodes.OPERATOR_AND) {
+                    iand
+                } else {
+                    ior
+                }
+                if (type != CompileDataType.BOOLEAN) {
+                    invokestatic(Boolean::class.javaObjectType, "toString", String::class, boolean)
+                }
+            }
             ScratchOpcodes.OPERATOR_NOT -> {
                 iconst_1
                 compileInput(block.inputs.getValue("OPERAND"), CompileDataType.BOOLEAN)

@@ -955,7 +955,10 @@ public class ScratchCompiler private constructor(
 
     private inline fun MethodAssembly.await(body: () -> Unit) {
         aload_1
+        getstatic(SCRATCH_ABI, "SCHEDULER", ASYNC_SCHEDULER)
+        aload_0
         body()
+        invokevirtual(ASYNC_SCHEDULER, "scheduleJob", SCHEDULED_JOB, TARGET_BASE, SCHEDULED_JOB)
         putfield(SCHEDULED_JOB, "awaiting", SCHEDULED_JOB)
         push_int(labelIndex)
         ireturn

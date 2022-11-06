@@ -51,7 +51,13 @@ public final class AsyncScheduler {
     }
 
     public void scheduleJob(Target target, AsyncHandler function) {
-        jobs.get(target).add(new ScheduledJob(function));
+        scheduleJob(target, new ScheduledJob(function));
+    }
+
+    @SuppressWarnings("UnusedReturnValue")
+    public ScheduledJob scheduleJob(Target target, ScheduledJob job) {
+        jobs.get(target).add(job);
+        return job;
     }
 
     public void registerEventHandler(Target target, int event, AsyncHandler handler) {
@@ -107,42 +113,32 @@ public final class AsyncScheduler {
         ScratchABI.RENDERER.init();
         try {
             boolean hasJobs;
-            mainLoop:
             do {
                 hasJobs = false;
-                targetsIter:
                 for (int i = targets.size() - 1; i >= 0; i--) {
                     final Target target = targets.get(i);
                     final List<ScheduledJob> targetJobs = jobs.get(target);
                     hasJobs |= !targetJobs.isEmpty();
-                    final Iterator<ScheduledJob> iter = targetJobs.iterator();
-                    while (iter.hasNext()) {
-                        ScheduledJob job = iter.next();
-                        ScheduledJob parentJob = null;
-                        while (job.awaiting != null && !job.awaiting.finished) {
-                            parentJob = job;
-                            job = job.awaiting;
-                        }
+                    for (int j = 0; j < targetJobs.size(); j++) {
+                        final ScheduledJob job = targetJobs.get(j);
                         if (job.awaiting != null) {
-                            job.awaiting = null;
+                            if (job.awaiting.finished) {
+                                job.awaiting = null;
+                            } else {
+                                continue;
+                            }
                         }
                         final int state = job.handler.handle(target, job);
                         switch (state) {
                             case SUSPEND_NO_RESCHEDULE:
                                 job.finished = true;
-                                if (parentJob == null) {
-                                    iter.remove();
-                                    if (targetJobs.isEmpty()) continue targetsIter;
-                                } else {
-                                    parentJob.awaiting = null;
-                                }
+                                targetJobs.remove(j--);
                                 continue;
                             case SUSPEND_CANCEL_ALL:
                                 job.finished = true;
-                                break mainLoop;
+                                return;
                         }
                         job.label = state;
-                        if (targetJobs.size() == 1) continue targetsIter;
                     }
                 }
                 if (ScratchABI.RENDERER.render(this)) break;

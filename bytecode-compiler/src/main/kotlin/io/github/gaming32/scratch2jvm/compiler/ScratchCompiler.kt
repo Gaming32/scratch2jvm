@@ -481,14 +481,61 @@ public class ScratchCompiler private constructor(
         type: CompileDataType = CompileDataType.DEFAULT
     ) {
         when (block.opcode) {
+            ScratchOpcodes.MOTION_GOTO,
             ScratchOpcodes.MOTION_GOTOXY -> {
                 if (!target.isStage) {
                     aload_0
-                    dup
-                    compileInput(block.inputs.getValue("X"), CompileDataType.NUMBER)
-                    invokevirtual(SPRITE_BASE, "setX", void, double)
-                    compileInput(block.inputs.getValue("Y"), CompileDataType.NUMBER)
-                    invokevirtual(SPRITE_BASE, "setY", void, double)
+                    if (block.opcode == ScratchOpcodes.MOTION_GOTO) {
+                        val toBlock = (block.inputs.getValue("TO") as ReferenceInput).value
+                        when (toBlock.fields.getValue("TO").name) {
+                            "_mouse_" -> {
+                                invokevirtual(SPRITE_BASE, "gotoMousePosition", SCHEDULED_JOB, double)
+                            }
+                            "_random_" -> {
+                                push_double(-240.0)
+                                push_double(240.0)
+                                invokestatic(SCRATCH_ABI, "random", double, double, double)
+                                push_double(-180.0)
+                                push_double(180.0)
+                                invokestatic(SCRATCH_ABI, "random", double, double, double)
+                                invokevirtual(SPRITE_BASE, "setXY", SCHEDULED_JOB, double, double)
+                            }
+                        }
+                    } else {
+                        compileInput(block.inputs.getValue("X"), CompileDataType.NUMBER)
+                        compileInput(block.inputs.getValue("Y"), CompileDataType.NUMBER)
+                        invokevirtual(SPRITE_BASE, "setXY", SCHEDULED_JOB, double, double)
+                    }
+                }
+            }
+            ScratchOpcodes.MOTION_GLIDETO,
+            ScratchOpcodes.MOTION_GLIDESECSTOXY -> {
+                if (!target.isStage) {
+                    await {
+                        aload_0
+                        compileInput(block.inputs.getValue("SECS"), CompileDataType.NUMBER)
+                        if (block.opcode == ScratchOpcodes.MOTION_GLIDETO) {
+                            val toBlock = (block.inputs.getValue("TO") as ReferenceInput).value
+                            when (toBlock.fields.getValue("TO").name) {
+                                "_mouse_" -> {
+                                    invokevirtual(SPRITE_BASE, "glideToMousePosition", SCHEDULED_JOB, double)
+                                }
+                                "_random_" -> {
+                                    push_double(-240.0)
+                                    push_double(240.0)
+                                    invokestatic(SCRATCH_ABI, "random", double, double, double)
+                                    push_double(-180.0)
+                                    push_double(180.0)
+                                    invokestatic(SCRATCH_ABI, "random", double, double, double)
+                                    invokevirtual(SPRITE_BASE, "glideTo", SCHEDULED_JOB, double, double, double)
+                                }
+                            }
+                        } else {
+                            compileInput(block.inputs.getValue("X"), CompileDataType.NUMBER)
+                            compileInput(block.inputs.getValue("Y"), CompileDataType.NUMBER)
+                            invokevirtual(SPRITE_BASE, "glideTo", SCHEDULED_JOB, double, double, double)
+                        }
+                    }
                 }
             }
             ScratchOpcodes.MOTION_SETX,
@@ -545,13 +592,10 @@ public class ScratchCompiler private constructor(
                 }
             }
             ScratchOpcodes.CONTROL_WAIT -> {
-                aload_1
-                compileInput(block.inputs.getValue("DURATION"), CompileDataType.NUMBER)
-                invokestatic(SCRATCH_ABI, "wait", SCHEDULED_JOB, double)
-                putfield(SCHEDULED_JOB, "awaiting", SCHEDULED_JOB)
-                push_int(labelIndex)
-                ireturn
-                addAsyncLabel()
+                await {
+                    compileInput(block.inputs.getValue("DURATION"), CompileDataType.NUMBER)
+                    invokestatic(SCRATCH_ABI, "wait", SCHEDULED_JOB, double)
+                }
             }
             ScratchOpcodes.CONTROL_REPEAT -> {
                 val countState = newState()
@@ -603,6 +647,13 @@ public class ScratchCompiler private constructor(
                 }
                 else -> throw IllegalArgumentException("Unknown control_stop STOP_OPTION $stopOption")
             }
+            ScratchOpcodes.SENSING_MOUSEDOWN -> {
+                getstatic(SCRATCH_ABI, "RENDERER", SCRATCH_RENDERER)
+                invokeinterface(SCRATCH_RENDERER, "isMouseDown", boolean)
+                if (type != CompileDataType.BOOLEAN) {
+                    invokestatic(Boolean::class.javaObjectType, "toString", String::class, boolean)
+                }
+            }
             ScratchOpcodes.OPERATOR_ADD,
             ScratchOpcodes.OPERATOR_SUBTRACT,
             ScratchOpcodes.OPERATOR_MULTIPLY,
@@ -625,7 +676,7 @@ public class ScratchCompiler private constructor(
             ScratchOpcodes.OPERATOR_RANDOM -> {
                 compileInput(block.inputs.getValue("FROM"), CompileDataType.NUMBER)
                 compileInput(block.inputs.getValue("TO"), CompileDataType.NUMBER)
-                invokestatic(SCRATCH_ABI, "random", double, double, double)
+                invokestatic(SCRATCH_ABI, "flooredRandom", double, double, double)
                 if (type != CompileDataType.NUMBER) {
                     invokestatic(SCRATCH_ABI, "doubleToString", String::class, double)
                 }
@@ -830,5 +881,14 @@ public class ScratchCompiler private constructor(
         val newIndex = labelIndex++
         +L[newIndex]
         return newIndex
+    }
+
+    private inline fun MethodAssembly.await(body: () -> Unit) {
+        aload_1
+        body()
+        putfield(SCHEDULED_JOB, "awaiting", SCHEDULED_JOB)
+        push_int(labelIndex)
+        ireturn
+        addAsyncLabel()
     }
 }

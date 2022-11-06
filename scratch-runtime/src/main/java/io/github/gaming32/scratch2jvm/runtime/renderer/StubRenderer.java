@@ -25,4 +25,19 @@ public final class StubRenderer implements ScratchRenderer {
     public void setApplication(ScratchApplication application) {
         this.application = application;
     }
+
+    @Override
+    public boolean isMouseDown() {
+        return false;
+    }
+
+    @Override
+    public void getMousePos(double[] xBuf, double[] yBuf) {
+        if (xBuf != null) {
+            xBuf[0] = 0;
+        }
+        if (yBuf != null) {
+            yBuf[0] = 0;
+        }
+    }
 }

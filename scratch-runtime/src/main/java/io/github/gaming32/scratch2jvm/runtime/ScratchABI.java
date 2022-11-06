@@ -92,8 +92,12 @@ public final class ScratchABI {
         return result;
     }
 
+    public static double flooredRandom(double from, double to) {
+        return Math.floor(random(from, to));
+    }
+
     public static double random(double from, double to) {
-        return Math.floor(from + Math.random() * (to - from + 1));
+        return from + Math.random() * (to - from + 1);
     }
 
     public static String letterOf(String s, double letter) {

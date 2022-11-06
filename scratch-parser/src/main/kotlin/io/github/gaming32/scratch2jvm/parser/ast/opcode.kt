@@ -1,7 +1,11 @@
 package io.github.gaming32.scratch2jvm.parser.ast
 
 public enum class ScratchOpcodes(public val id: String) {
+    MOTION_GOTO("motion_goto"),
     MOTION_GOTOXY("motion_gotoxy"),
+    MOTION_GLIDETO("motion_glideto"),
+    MOTION_GLIDETO_MENU("motion_glideto_menu"),
+    MOTION_GLIDESECSTOXY("motion_glidesecstoxy"),
     MOTION_CHANGEXBY("motion_changexby"),
     MOTION_SETX("motion_setx"),
     MOTION_CHANGEYBY("motion_changeyby"),
@@ -18,6 +22,8 @@ public enum class ScratchOpcodes(public val id: String) {
     CONTROL_FOREVER("control_forever"),
     CONTROL_IF("control_if"),
     CONTROL_STOP("control_stop"),
+
+    SENSING_MOUSEDOWN("sensing_mousedown"),
 
     OPERATOR_ADD("operator_add"),
     OPERATOR_SUBTRACT("operator_subtract"),
@@ -61,7 +67,11 @@ public enum class ScratchOpcodes(public val id: String) {
 }
 
 public object MotionOpcodes {
+    public val GOTO: ScratchOpcodes = ScratchOpcodes.MOTION_GOTO
     public val GOTO_X_Y: ScratchOpcodes = ScratchOpcodes.MOTION_GOTOXY
+    public val GLIDE_TO: ScratchOpcodes = ScratchOpcodes.MOTION_GLIDETO
+    public val GLIDE_TO_MENU: ScratchOpcodes = ScratchOpcodes.MOTION_GLIDETO_MENU
+    public val GLIDE_SECS_TO_X_Y: ScratchOpcodes = ScratchOpcodes.MOTION_GLIDESECSTOXY
     public val CHANGE_X_BY: ScratchOpcodes = ScratchOpcodes.MOTION_CHANGEXBY
     public val SET_X: ScratchOpcodes = ScratchOpcodes.MOTION_SETX
     public val CHANGE_Y_BY: ScratchOpcodes = ScratchOpcodes.MOTION_CHANGEYBY
@@ -84,6 +94,10 @@ public object ControlOpcodes {
     public val FOREVER: ScratchOpcodes = ScratchOpcodes.CONTROL_FOREVER
     public val IF: ScratchOpcodes = ScratchOpcodes.CONTROL_IF
     public val STOP: ScratchOpcodes = ScratchOpcodes.CONTROL_STOP
+}
+
+public object SensingOpcodes {
+    public val MOUSE_DOWN: ScratchOpcodes = ScratchOpcodes.SENSING_MOUSEDOWN
 }
 
 public object OperatorsOpcodes {

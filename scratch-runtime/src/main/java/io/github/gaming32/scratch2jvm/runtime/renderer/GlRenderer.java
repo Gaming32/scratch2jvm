@@ -280,4 +280,25 @@ public final class GlRenderer implements ScratchRenderer {
     public void setApplication(ScratchApplication application) {
         this.application = application;
     }
+
+    @Override
+    public boolean isMouseDown() {
+        for (int button = GLFW_MOUSE_BUTTON_LEFT; button <= GLFW_MOUSE_BUTTON_LAST; button++) {
+            if (glfwGetMouseButton(window, button) == GLFW_PRESS) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    @Override
+    public void getMousePos(double[] xBuf, double[] yBuf) {
+        glfwGetCursorPos(window, xBuf, yBuf);
+        if (xBuf != null) {
+            xBuf[0] = (xBuf[0] - barSize.x) / graphicsScale - 240.0;
+        }
+        if (yBuf != null) {
+            yBuf[0] = 180.0 - (yBuf[0] - barSize.y) / graphicsScale;
+        }
+    }
 }

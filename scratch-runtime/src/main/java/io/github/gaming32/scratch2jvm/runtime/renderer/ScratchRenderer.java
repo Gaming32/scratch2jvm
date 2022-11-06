@@ -15,4 +15,8 @@ public interface ScratchRenderer {
     void quit();
 
     void setApplication(ScratchApplication application);
+
+    boolean isMouseDown();
+
+    void getMousePos(double[] xBuf, double[] yBuf);
 }

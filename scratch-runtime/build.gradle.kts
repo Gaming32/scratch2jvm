@@ -6,6 +6,7 @@ group = "io.github.gaming32.scratch2jvm"
 version = "1.0-SNAPSHOT"
 
 val lwjglVersion = "3.3.1"
+val jomlVersion = "1.10.5"
 
 repositories {
     mavenCentral()
@@ -24,4 +25,6 @@ dependencies {
             implementation("org.lwjgl", library, classifier = "natives-$natives")
         }
     }
+
+    implementation("org.joml", "joml", jomlVersion)
 }

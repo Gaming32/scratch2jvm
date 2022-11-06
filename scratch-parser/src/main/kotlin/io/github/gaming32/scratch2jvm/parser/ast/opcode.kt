@@ -22,6 +22,7 @@ public enum class ScratchOpcodes(public val id: String) {
     OPERATOR_DIVIDE("operator_divide"),
     OPERATOR_RANDOM("operator_random"),
     OPERATOR_GT("operator_gt"),
+    OPERATOR_LT("operator_lt"),
     OPERATOR_EQUALS("operator_equals"),
     OPERATOR_JOIN("operator_join"),
     OPERATOR_LETTER_OF("operator_letter_of"),
@@ -86,6 +87,7 @@ public object OperatorsOpcodes {
     public val DIVIDE: ScratchOpcodes = ScratchOpcodes.OPERATOR_DIVIDE
     public val RANDOM: ScratchOpcodes = ScratchOpcodes.OPERATOR_RANDOM
     public val GT: ScratchOpcodes = ScratchOpcodes.OPERATOR_GT
+    public val LT: ScratchOpcodes = ScratchOpcodes.OPERATOR_LT
     public val EQUALS: ScratchOpcodes = ScratchOpcodes.OPERATOR_EQUALS
     public val JOIN: ScratchOpcodes = ScratchOpcodes.OPERATOR_JOIN
     public val LETTER_OF: ScratchOpcodes = ScratchOpcodes.OPERATOR_LETTER_OF

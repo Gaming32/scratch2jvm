@@ -46,6 +46,10 @@ public final class AsyncScheduler {
         }
     }
 
+    public List<Target> getTargets() {
+        return targets;
+    }
+
     public void scheduleJob(Target target, AsyncHandler function) {
         jobs.get(target).add(new ScheduledJob(function));
     }
@@ -101,47 +105,50 @@ public final class AsyncScheduler {
 
     public void runUntilComplete() {
         ScratchABI.RENDERER.init();
-        boolean hasJobs;
-        mainLoop:
-        do {
-            hasJobs = false;
-            targetsIter:
-            for (int i = targets.size() - 1; i >= 0; i--) {
-                final Target target = targets.get(i);
-                final List<ScheduledJob> targetJobs = jobs.get(target);
-                hasJobs |= !targetJobs.isEmpty();
-                final Iterator<ScheduledJob> iter = targetJobs.iterator();
-                while (iter.hasNext()) {
-                    ScheduledJob job = iter.next();
-                    ScheduledJob parentJob = null;
-                    while (job.awaiting != null && !job.awaiting.finished) {
-                        parentJob = job;
-                        job = job.awaiting;
+        try {
+            boolean hasJobs;
+            mainLoop:
+            do {
+                hasJobs = false;
+                targetsIter:
+                for (int i = targets.size() - 1; i >= 0; i--) {
+                    final Target target = targets.get(i);
+                    final List<ScheduledJob> targetJobs = jobs.get(target);
+                    hasJobs |= !targetJobs.isEmpty();
+                    final Iterator<ScheduledJob> iter = targetJobs.iterator();
+                    while (iter.hasNext()) {
+                        ScheduledJob job = iter.next();
+                        ScheduledJob parentJob = null;
+                        while (job.awaiting != null && !job.awaiting.finished) {
+                            parentJob = job;
+                            job = job.awaiting;
+                        }
+                        if (job.awaiting != null) {
+                            job.awaiting = null;
+                        }
+                        final int state = job.handler.handle(target, job);
+                        switch (state) {
+                            case SUSPEND_NO_RESCHEDULE:
+                                job.finished = true;
+                                if (parentJob == null) {
+                                    iter.remove();
+                                    if (targetJobs.isEmpty()) continue targetsIter;
+                                } else {
+                                    parentJob.awaiting = null;
+                                }
+                                continue;
+                            case SUSPEND_CANCEL_ALL:
+                                job.finished = true;
+                                break mainLoop;
+                        }
+                        job.label = state;
+                        if (targetJobs.size() == 1) continue targetsIter;
                     }
-                    if (job.awaiting != null) {
-                        job.awaiting = null;
-                    }
-                    final int state = job.handler.handle(target, job);
-                    switch (state) {
-                        case SUSPEND_NO_RESCHEDULE:
-                            job.finished = true;
-                            if (parentJob == null) {
-                                iter.remove();
-                                if (targetJobs.isEmpty()) continue targetsIter;
-                            } else {
-                                parentJob.awaiting = null;
-                            }
-                            continue;
-                        case SUSPEND_CANCEL_ALL:
-                            job.finished = true;
-                            break mainLoop;
-                    }
-                    job.label = state;
-                    if (targetJobs.size() == 1) continue targetsIter;
                 }
-            }
-            ScratchABI.RENDERER.render(this);
-        } while (hasJobs);
-        ScratchABI.RENDERER.quit();
+                if (ScratchABI.RENDERER.render(this)) break;
+            } while (hasJobs);
+        } finally {
+            ScratchABI.RENDERER.quit();
+        }
     }
 }

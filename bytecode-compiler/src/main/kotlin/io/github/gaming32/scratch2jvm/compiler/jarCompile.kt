@@ -71,11 +71,10 @@ public fun compileToJar(inFile: File, outFile: File, fatness: FatnessLevel = Fat
                 if (fatness >= FatnessLevel.LWJGL) {
                     LOGGER.info("Writing LWJGL")
                     copyPackageToJar("org.lwjgl", outJar)
+                    copyPackageToJar("org.joml", outJar)
                     if (fatness >= FatnessLevel.NATIVES) {
                         LOGGER.info("Writing LWJGL natives")
-                        Reflections(Scanners.Resources).get(
-                            Scanners.Resources.with(".*lwjgl.*")
-                        ).forEach { resource ->
+                        Reflections(Scanners.Resources).getAll(Scanners.Resources).forEach { resource ->
                             if (!resource.contains("/org/lwjgl/")) return@forEach
                             val path = outJar.getPath(resource)
                             path.parent.createDirectories()

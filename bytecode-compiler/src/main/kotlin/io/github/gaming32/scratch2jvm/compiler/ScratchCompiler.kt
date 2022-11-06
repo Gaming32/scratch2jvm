@@ -11,6 +11,7 @@ import codes.som.koffee.sugar.ClassAssemblyExtension.clinit
 import codes.som.koffee.sugar.ClassAssemblyExtension.init
 import codes.som.koffee.types.TypeLike
 import io.github.gaming32.scratch2jvm.parser.ast.*
+import io.github.gaming32.scratch2jvm.parser.data.ScratchCostume
 import io.github.gaming32.scratch2jvm.parser.data.ScratchProject
 import io.github.gaming32.scratch2jvm.parser.data.ScratchTarget
 import io.github.gaming32.scratch2jvm.parser.prettyPrint
@@ -24,24 +25,21 @@ public class ScratchCompiler private constructor(
     public companion object {
         private const val RUNTIME_PACKAGE: String = "io/github/gaming32/scratch2jvm/runtime"
         public const val SCRATCH_ABI: String = "$RUNTIME_PACKAGE/ScratchABI"
+        public const val SCRATCH_APPLICATION: String = "$RUNTIME_PACKAGE/ScratchApplication"
+        public const val SCRATCH_COSTUME: String = "$RUNTIME_PACKAGE/ScratchCostume"
+        public const val SCRATCH_COSTUME_FORMAT: String = "$SCRATCH_COSTUME\$Format"
         private const val ASYNC_PACKAGE: String = "$RUNTIME_PACKAGE/async"
         public const val ASYNC_HANDLER: String = "$ASYNC_PACKAGE/AsyncHandler"
         public const val ASYNC_SCHEDULER: String = "$ASYNC_PACKAGE/AsyncScheduler"
         public const val SCHEDULED_JOB: String = "$ASYNC_PACKAGE/ScheduledJob"
         private const val RENDERER_PACKAGE: String = "$RUNTIME_PACKAGE/renderer"
         public const val SCRATCH_RENDERER: String = "$RENDERER_PACKAGE/ScratchRenderer"
-        public const val STUB_RENDERER: String = "$RENDERER_PACKAGE/StubRenderer"
-        public const val GL_RENDERER: String = "$RENDERER_PACKAGE/GlRenderer"
         private const val TARGET_PACKAGE: String = "$RUNTIME_PACKAGE/target"
         public const val TARGET_BASE: String = "$TARGET_PACKAGE/Target"
         public const val STAGE_BASE: String = "$TARGET_PACKAGE/Stage"
         public const val SPRITE_BASE: String = "$TARGET_PACKAGE/Sprite"
-        public val USED_RUNTIME_CLASSES: List<String> = listOf(
-            SCRATCH_ABI,
-            ASYNC_HANDLER, ASYNC_SCHEDULER, SCHEDULED_JOB,
-            SCRATCH_RENDERER, STUB_RENDERER, GL_RENDERER,
-            TARGET_BASE, STAGE_BASE, SPRITE_BASE
-        )
+        private const val UTIL_PACKAGE: String = "$RUNTIME_PACKAGE/util"
+        public const val NAMED_INDEXED_ARRAY: String = "$UTIL_PACKAGE/NamedIndexedArray"
 
         private val REMAPPED_MATH_OPS = mapOf(
             "ceiling" to "ceil",
@@ -133,7 +131,34 @@ public class ScratchCompiler private constructor(
                         method(private, "<init>", void) {
                             aload_0
                             ldc(target.name)
-                            invokespecial(superName, "<init>", void, String::class)
+                            construct(NAMED_INDEXED_ARRAY, void, Array<String>::class, Array<Any>::class) {
+                                push_int(target.costumes.size)
+                                anewarray(Any::class)
+                                push_int(target.costumes.size)
+                                anewarray(String::class)
+                                target.costumes.forEachIndexed { i, costume ->
+                                    dup_x1
+                                    push_int(i)
+                                    if ((i and 1) == 0) {
+                                        ldc(costume.name)
+                                        aastore
+                                        dup
+                                        push_int(i)
+                                        compileCostume(costume)
+                                    } else {
+                                        compileCostume(costume)
+                                        aastore
+                                        dup
+                                        push_int(i)
+                                        ldc(costume.name)
+                                    }
+                                    aastore
+                                }
+                                if ((target.costumes.size and 1) == 0) {
+                                    swap
+                                }
+                            }
+                            invokespecial(superName, "<init>", void, String::class, NAMED_INDEXED_ARRAY)
                             for (variable in target.variables.values) {
                                 aload_0
                                 ldc(variable.value)
@@ -213,7 +238,9 @@ public class ScratchCompiler private constructor(
                             method(private, "<init>", void, className) {
                                 aload_0
                                 ldc(target.name)
-                                invokespecial(superName, "<init>", void, String::class)
+                                aload_1
+                                getfield(TARGET_BASE, "costumes", NAMED_INDEXED_ARRAY)
+                                invokespecial(superName, "<init>", void, String::class, NAMED_INDEXED_ARRAY)
                                 for (variable in target.variables.values) {
                                     val name = escapeUnqualifiedName(variable.name)
                                     aload_0
@@ -337,11 +364,25 @@ public class ScratchCompiler private constructor(
                 }
 
                 put(mainClassName, assembleClass(public + final, mainClassName) {
+                    field(public + static + final, "APPLICATION", SCRATCH_APPLICATION)
+
+                    clinit {
+                        construct(SCRATCH_APPLICATION, void, String::class, int) {
+                            ldc(projectName)
+                            push_int(30)
+                        }
+                        putstatic(mainClassName, "APPLICATION", SCRATCH_APPLICATION)
+                        _return
+                    }
+
                     init(private) {
                         _return
                     }
 
                     method(public + static, "main", void, Array<String>::class) {
+                        getstatic(SCRATCH_ABI, "RENDERER", SCRATCH_RENDERER)
+                        getstatic(mainClassName, "APPLICATION", SCRATCH_APPLICATION)
+                        invokeinterface(SCRATCH_RENDERER, "setApplication", void, SCRATCH_APPLICATION)
                         getstatic(SCRATCH_ABI, "SCHEDULER", ASYNC_SCHEDULER)
                         for (target in project.targets.values.sortedBy { it.layerOrder }) {
                             val className = escapePackageName("scratch", projectName, "target", target.name)
@@ -577,14 +618,20 @@ public class ScratchCompiler private constructor(
                     invokestatic(SCRATCH_ABI, "doubleToString", String::class, double)
                 }
             }
+            ScratchOpcodes.OPERATOR_GT,
+            ScratchOpcodes.OPERATOR_LT,
             ScratchOpcodes.OPERATOR_EQUALS -> {
-                if (type != CompileDataType.NUMBER) {
-                    compileInput(block.inputs.getValue("OPERAND1"))
-                    compileInput(block.inputs.getValue("OPERAND2"))
-                    invokevirtual(String::class, "equals", boolean, Any::class)
-                    if (type != CompileDataType.BOOLEAN) {
-                        invokestatic(Boolean::class.javaObjectType, "toString", String::class, boolean)
-                    }
+                compileInput(block.inputs.getValue("OPERAND1"))
+                compileInput(block.inputs.getValue("OPERAND2"))
+                push_int(when (block.opcode) {
+                    ScratchOpcodes.OPERATOR_GT -> 1
+                    ScratchOpcodes.OPERATOR_LT -> -1
+                    ScratchOpcodes.OPERATOR_EQUALS -> 0
+                    else -> throw AssertionError()
+                })
+                invokestatic(SCRATCH_ABI, "compareValues", boolean, String::class, String::class, int)
+                if (type != CompileDataType.BOOLEAN) {
+                    invokestatic(Boolean::class.javaObjectType, "toString", String::class, boolean)
                 }
             }
             ScratchOpcodes.OPERATOR_JOIN -> {
@@ -732,6 +779,16 @@ public class ScratchCompiler private constructor(
         CompileDataType.DEFAULT -> invokestatic(Integer::class, "toString", String::class, int)
         CompileDataType.NUMBER -> i2d
         CompileDataType.BOOLEAN -> {}
+    }
+
+    private fun MethodAssembly.compileCostume(costume: ScratchCostume) {
+        construct(SCRATCH_COSTUME, void, String::class, String::class, SCRATCH_COSTUME_FORMAT, double, double) {
+            ldc(costume.name)
+            ldc(costume.path)
+            getstatic(SCRATCH_COSTUME_FORMAT, costume.format.name, SCRATCH_COSTUME_FORMAT)
+            push_double(costume.centerX)
+            push_double(costume.centerY)
+        }
     }
 
     private fun newState(): Int {

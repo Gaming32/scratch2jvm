@@ -168,4 +168,12 @@ public final class ScratchABI {
             return 0;
         });
     }
+
+    public static boolean compareValues(String v1, String v2, int check) {
+        try {
+            return Double.compare(Double.parseDouble(v1), Double.parseDouble(v2)) == check;
+        } catch (NumberFormatException e) {
+            return v1.compareToIgnoreCase(v2) == check;
+        }
+    }
 }

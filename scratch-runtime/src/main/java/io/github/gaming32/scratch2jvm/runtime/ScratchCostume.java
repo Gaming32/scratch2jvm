@@ -10,6 +10,7 @@ public final class ScratchCostume {
     public final String path;
     public final Format format;
     public final double centerX, centerY;
+    public double width, height;
 
     public ScratchCostume(String name, String path, Format format, double centerX, double centerY) {
         this.name = name;

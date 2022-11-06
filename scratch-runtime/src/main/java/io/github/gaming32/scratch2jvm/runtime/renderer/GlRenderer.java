@@ -19,6 +19,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
 import java.util.IdentityHashMap;
 import java.util.Map;
@@ -40,8 +41,8 @@ public final class GlRenderer implements ScratchRenderer {
     private final Vector2i windowSize = new Vector2i();
     private final Vector2i barSize = new Vector2i();
     private int boundTex = -1;
-    private double graphicsScale;
     private long window;
+    private double graphicsScale;
     private long rasterizer;
     private double lastTime;
 
@@ -75,6 +76,7 @@ public final class GlRenderer implements ScratchRenderer {
         });
         setViewport();
 
+        glDisable(GL_DEPTH_TEST);
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
@@ -141,11 +143,19 @@ public final class GlRenderer implements ScratchRenderer {
                 glBindTexture(GL_TEXTURE_2D, costumeTex);
                 boundTex = costumeTex;
             }
+            final double width, height;
+            if (target.isStage) {
+                width = costume.centerX;
+                height = costume.centerY;
+            } else {
+                width = costume.width * scale;
+                height = costume.height * scale;
+            }
             texturedQuad(
-                (float)(x - costume.centerX * scale),
-                (float)(y + costume.centerY * scale),
-                (float)(x + costume.centerX * scale),
-                (float)(y - costume.centerY * scale)
+                (float)(x - width / 2),
+                (float)(y + height / 2),
+                (float)(x + width / 2),
+                (float)(y - height / 2)
             );
         }
         final int barX = (int)(barSize.x / graphicsScale);
@@ -173,13 +183,13 @@ public final class GlRenderer implements ScratchRenderer {
                 } catch (IOException e) {
                     throw new RuntimeException(e);
                 }
-                width = image.getWidth();
-                height = image.getHeight();
-                rgba = MemoryUtil.memAlloc(width * height * 4);
+                costume.width = width = image.getWidth();
+                costume.height = height = image.getWidth();
+                rgba = MemoryUtil.memAlloc(width * height * 4).order(ByteOrder.BIG_ENDIAN);
                 final int[] argb = new int[width * height];
                 image.getRGB(0, 0, width, height, argb, 0, width);
                 for (int pixel : argb) {
-                    rgba.putInt(pixel); // Interesting
+                    rgba.putInt((pixel << 8) | (pixel >>> 24));
                 }
                 rgba.flip();
             } else { // SVG
@@ -205,10 +215,12 @@ public final class GlRenderer implements ScratchRenderer {
                     }
                     return svg;
                 });
-                width = (int)(image.width() * graphicsScale);
-                height = (int)(image.height() * graphicsScale);
+                costume.width = image.width();
+                costume.height = image.height();
+                width = (int)(costume.width * scale);
+                height = (int)(costume.height * scale);
                 rgba = MemoryUtil.memAlloc(width * height * 4);
-                nsvgRasterize(rasterizer, image, 0, 0, (float)graphicsScale, rgba, width, height, width * 4);
+                nsvgRasterize(rasterizer, image, 0, 0, (float)scale, rgba, width, height, width * 4);
             }
             final int newTex = glGenTextures();
             glBindTexture(GL_TEXTURE_2D, newTex);

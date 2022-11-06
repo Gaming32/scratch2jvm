@@ -486,22 +486,34 @@ public class ScratchCompiler private constructor(
                     aload_0
                     dup
                     compileInput(block.inputs.getValue("X"), CompileDataType.NUMBER)
-                    putfield(SPRITE_BASE, "x", double)
+                    invokevirtual(SPRITE_BASE, "setX", void, double)
                     compileInput(block.inputs.getValue("Y"), CompileDataType.NUMBER)
-                    putfield(SPRITE_BASE, "y", double)
+                    invokevirtual(SPRITE_BASE, "setY", void, double)
                 }
             }
-            ScratchOpcodes.MOTION_CHANGEXBY -> {
+            ScratchOpcodes.MOTION_SETX,
+            ScratchOpcodes.MOTION_SETY -> {
                 if (!target.isStage) {
+                    val axis = if (block.opcode == ScratchOpcodes.MOTION_SETX) "X" else "Y"
+                    aload_0
+                    compileInput(block.inputs.getValue(axis), CompileDataType.NUMBER)
+                    invokevirtual(SPRITE_BASE, "set$axis", void, double)
+                }
+            }
+            ScratchOpcodes.MOTION_CHANGEXBY,
+            ScratchOpcodes.MOTION_CHANGEYBY -> {
+                if (!target.isStage) {
+                    val axis = if (block.opcode == ScratchOpcodes.MOTION_CHANGEXBY) "X" else "Y"
                     aload_0
                     dup
-                    getfield(SPRITE_BASE, "x", double)
-                    compileInput(block.inputs.getValue("DX"), CompileDataType.NUMBER)
+                    getfield(SPRITE_BASE, axis.lowercase(), double)
+                    compileInput(block.inputs.getValue("D$axis"), CompileDataType.NUMBER)
                     dadd
-                    putfield(SPRITE_BASE, "x", double)
+                    invokevirtual(SPRITE_BASE, "set$axis", void, double)
                 }
             }
-            ScratchOpcodes.MOTION_XPOSITION -> {
+            ScratchOpcodes.MOTION_XPOSITION,
+            ScratchOpcodes.MOTION_YPOSITION -> {
                 if (target.isStage) {
                     if (type == CompileDataType.NUMBER) {
                         push_double(0.0)
@@ -510,7 +522,7 @@ public class ScratchCompiler private constructor(
                     }
                 } else {
                     aload_0
-                    getfield(SPRITE_BASE, "x", double)
+                    getfield(SPRITE_BASE, if (block.opcode == ScratchOpcodes.MOTION_XPOSITION) "x" else "y", double)
                     if (type != CompileDataType.NUMBER) {
                         invokestatic(SCRATCH_ABI, "doubleToString", String::class, double)
                     }

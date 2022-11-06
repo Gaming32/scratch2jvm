@@ -4,7 +4,10 @@ public enum class ScratchOpcodes(public val id: String) {
     MOTION_GOTOXY("motion_gotoxy"),
     MOTION_CHANGEXBY("motion_changexby"),
     MOTION_SETX("motion_setx"),
+    MOTION_CHANGEYBY("motion_changeyby"),
+    MOTION_SETY("motion_sety"),
     MOTION_XPOSITION("motion_xposition"),
+    MOTION_YPOSITION("motion_yposition"),
 
     LOOKS_SAY("looks_say"),
 
@@ -61,7 +64,10 @@ public object MotionOpcodes {
     public val GOTO_X_Y: ScratchOpcodes = ScratchOpcodes.MOTION_GOTOXY
     public val CHANGE_X_BY: ScratchOpcodes = ScratchOpcodes.MOTION_CHANGEXBY
     public val SET_X: ScratchOpcodes = ScratchOpcodes.MOTION_SETX
+    public val CHANGE_Y_BY: ScratchOpcodes = ScratchOpcodes.MOTION_CHANGEYBY
+    public val SET_Y: ScratchOpcodes = ScratchOpcodes.MOTION_SETY
     public val X_POSITION: ScratchOpcodes = ScratchOpcodes.MOTION_XPOSITION
+    public val Y_POSITION: ScratchOpcodes = ScratchOpcodes.MOTION_YPOSITION
 }
 
 public object LooksOpcodes {

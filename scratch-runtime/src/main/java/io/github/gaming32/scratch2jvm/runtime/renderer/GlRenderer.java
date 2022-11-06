@@ -143,30 +143,22 @@ public final class GlRenderer implements ScratchRenderer {
                 glBindTexture(GL_TEXTURE_2D, costumeTex);
                 boundTex = costumeTex;
             }
-            final double width, height;
-            if (target.isStage) {
-                width = costume.centerX;
-                height = costume.centerY;
-            } else {
-                width = costume.width * scale;
-                height = costume.height * scale;
-            }
             texturedQuad(
-                (float)(x - width / 2),
-                (float)(y + height / 2),
-                (float)(x + width / 2),
-                (float)(y - height / 2)
+                (float)(x - costume.width * costume.coordinateScale * scale / 2),
+                (float)(y + costume.height * costume.coordinateScale * scale / 2),
+                (float)(x + costume.width * costume.coordinateScale * scale / 2),
+                (float)(y - costume.height * costume.coordinateScale * scale / 2)
             );
         }
         final int barX = (int)(barSize.x / graphicsScale);
         final int barY = (int)(barSize.y / graphicsScale);
         glDisable(GL_TEXTURE_2D);
         if (barX > 0) {
-            quad(-240 - barX, -180, -240, 180);
-            quad(240, -180, 240 + barX, 180);
+            quad(-250 - barX, -180, -240, 180);
+            quad(240, -180, 250 + barX, 180);
         } else if (barY > 0) {
-            quad(-240, -180 - barY, 240, -180);
-            quad(-240, 180, 240, 180 + barY);
+            quad(-240, -190 - barY, 240, -180);
+            quad(-240, 180, 240, 190 + barY);
         }
         glfwSwapBuffers(window);
         return false;

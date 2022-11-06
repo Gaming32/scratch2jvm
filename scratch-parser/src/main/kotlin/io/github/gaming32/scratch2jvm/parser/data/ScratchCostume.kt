@@ -8,7 +8,8 @@ public data class ScratchCostume(
     public val path: String,
     public val format: Format,
     public val centerX: Double,
-    public val centerY: Double
+    public val centerY: Double,
+    public val coordinateScale: Double
 ) : PrettyPrintable {
     public enum class Format {
         SVG, PNG
@@ -20,7 +21,8 @@ public data class ScratchCostume(
             path = "/" + data["md5ext"].asString,
             format = Format.valueOf(data["dataFormat"].asString.uppercase()),
             centerX = data["rotationCenterX"].asDouble,
-            centerY = data["rotationCenterY"].asDouble
+            centerY = data["rotationCenterY"].asDouble,
+            coordinateScale = 1.0 / (data["bitmapResolution"]?.asInt ?: 1)
         )
     }
 }

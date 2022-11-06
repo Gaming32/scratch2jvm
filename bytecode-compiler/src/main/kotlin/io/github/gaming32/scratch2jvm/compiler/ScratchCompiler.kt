@@ -915,12 +915,17 @@ public class ScratchCompiler private constructor(
     }
 
     private fun MethodAssembly.compileCostume(costume: ScratchCostume) {
-        construct(SCRATCH_COSTUME, void, String::class, String::class, SCRATCH_COSTUME_FORMAT, double, double) {
+        construct(
+            SCRATCH_COSTUME,
+            void,
+            String::class, String::class, SCRATCH_COSTUME_FORMAT, double, double, double
+        ) {
             ldc(costume.name)
             ldc(costume.path)
             getstatic(SCRATCH_COSTUME_FORMAT, costume.format.name, SCRATCH_COSTUME_FORMAT)
             push_double(costume.centerX)
             push_double(costume.centerY)
+            push_double(costume.coordinateScale)
         }
     }
 

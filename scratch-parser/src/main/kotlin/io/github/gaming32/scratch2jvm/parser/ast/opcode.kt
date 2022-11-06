@@ -7,10 +7,12 @@ public enum class ScratchOpcodes(public val id: String) {
     MOTION_GLIDETO("motion_glideto"),
     MOTION_GLIDETO_MENU("motion_glideto_menu"),
     MOTION_GLIDESECSTOXY("motion_glidesecstoxy"),
+    MOTION_POINTINDIRECTION("motion_pointindirection"),
     MOTION_CHANGEXBY("motion_changexby"),
     MOTION_SETX("motion_setx"),
     MOTION_CHANGEYBY("motion_changeyby"),
     MOTION_SETY("motion_sety"),
+    MOTION_SETROTATIONSTYLE("motion_setrotationstyle"),
     MOTION_XPOSITION("motion_xposition"),
     MOTION_YPOSITION("motion_yposition"),
 
@@ -29,6 +31,7 @@ public enum class ScratchOpcodes(public val id: String) {
     SENSING_KEYPRESSED("sensing_keypressed"),
     SENSING_KEYOPTIONS("sensing_keyoptions"),
     SENSING_MOUSEDOWN("sensing_mousedown"),
+    SENSING_TIMER("sensing_timer"),
 
     OPERATOR_ADD("operator_add"),
     OPERATOR_SUBTRACT("operator_subtract"),
@@ -79,10 +82,12 @@ public object MotionOpcodes {
     public val GOTO_X_Y: ScratchOpcodes = ScratchOpcodes.MOTION_GOTOXY
     public val GLIDE_TO: ScratchOpcodes = ScratchOpcodes.MOTION_GLIDETO
     public val GLIDE_SECS_TO_X_Y: ScratchOpcodes = ScratchOpcodes.MOTION_GLIDESECSTOXY
+    public val POINT_IN_DIRECTION: ScratchOpcodes = ScratchOpcodes.MOTION_POINTINDIRECTION
     public val CHANGE_X_BY: ScratchOpcodes = ScratchOpcodes.MOTION_CHANGEXBY
     public val SET_X: ScratchOpcodes = ScratchOpcodes.MOTION_SETX
     public val CHANGE_Y_BY: ScratchOpcodes = ScratchOpcodes.MOTION_CHANGEYBY
     public val SET_Y: ScratchOpcodes = ScratchOpcodes.MOTION_SETY
+    public val SET_ROTATION_STYLE: ScratchOpcodes = ScratchOpcodes.MOTION_SETROTATIONSTYLE
     public val X_POSITION: ScratchOpcodes = ScratchOpcodes.MOTION_XPOSITION
     public val Y_POSITION: ScratchOpcodes = ScratchOpcodes.MOTION_YPOSITION
 }

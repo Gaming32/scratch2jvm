@@ -21,4 +21,6 @@ public interface ScratchRenderer {
     void getMousePos(double[] xBuf, double[] yBuf);
 
     boolean keyPressed(int glfwKey);
+
+    double getAbsoluteTimer();
 }

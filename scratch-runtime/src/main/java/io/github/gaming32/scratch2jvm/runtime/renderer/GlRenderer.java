@@ -132,23 +132,40 @@ public final class GlRenderer implements ScratchRenderer {
         glEnable(GL_TEXTURE_2D);
         for (final Target target : scheduler.getTargets()) {
             final ScratchCostume costume = target.costumes.get(target.costume);
-            double x = 0, y = 0, scale = 1;
+            double x = 0, y = 0, scale = 1, direction = 90;
+            int rotationStyle = 0;
             if (target instanceof Sprite) {
-                x = ((Sprite)target).x;
-                y = ((Sprite)target).y;
-                scale = ((Sprite)target).size / 100.0;
+                final Sprite sprite = (Sprite)target;
+                x = sprite.x;
+                y = sprite.y;
+                scale = sprite.size / 100.0;
+                direction = sprite.direction;
+                rotationStyle = sprite.rotationStyle;
             }
             final int costumeTex = getCostumeTex(costume, graphicsScale * scale);
             if (costumeTex != boundTex) {
                 glBindTexture(GL_TEXTURE_2D, costumeTex);
                 boundTex = costumeTex;
             }
-            texturedQuad(
-                (float)(x - costume.width * costume.coordinateScale * scale / 2),
-                (float)(y + costume.height * costume.coordinateScale * scale / 2),
-                (float)(x + costume.width * costume.coordinateScale * scale / 2),
-                (float)(y - costume.height * costume.coordinateScale * scale / 2)
+            glMatrixMode(GL_MODELVIEW);
+            glPushMatrix();
+            glTranslatef((float)x, (float)y, 0);
+            if (rotationStyle == 2) {
+                // all around
+                glRotatef((float)(-direction + 90), 0, 0, 1);
+            } else if (rotationStyle == 0 && direction < 0) {
+                // left-right
+                glScalef(-1, 1, 1);
+            }
+            glTranslatef(
+                (float)((costume.width / 2 - costume.centerX) * scale),
+                (float)((costume.centerY - costume.height / 2) * scale),
+                0
             );
+            final float xShift = (float)(costume.width * costume.coordinateScale * scale / 2);
+            final float yShift = (float)(costume.height * costume.coordinateScale * scale / 2);
+            texturedQuad(-xShift, yShift, xShift, -yShift);
+            glPopMatrix();
         }
         final int barX = (int)(barSize.x / graphicsScale);
         final int barY = (int)(barSize.y / graphicsScale);
@@ -308,5 +325,10 @@ public final class GlRenderer implements ScratchRenderer {
     @Override
     public boolean keyPressed(int glfwKey) {
         return glfwGetKey(window, glfwKey) == GLFW_PRESS;
+    }
+
+    @Override
+    public double getAbsoluteTimer() {
+        return glfwGetTime();
     }
 }

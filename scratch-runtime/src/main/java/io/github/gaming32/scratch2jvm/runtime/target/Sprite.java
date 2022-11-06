@@ -31,6 +31,11 @@ public abstract class Sprite extends Target {
         this.y = Math.clamp(-dist, dist, y);
     }
 
+    public final void setDirection(double direction) {
+        direction = ScratchABI.mod(direction, 360);
+        this.direction = direction > 180 ? direction - 360 : direction;
+    }
+
     public final void gotoMousePosition() {
         final double[] xBuf = new double[1];
         final double[] yBuf = new double[1];

@@ -5,6 +5,7 @@ import io.github.gaming32.scratch2jvm.runtime.async.AsyncScheduler;
 
 public final class StubRenderer implements ScratchRenderer {
     private ScratchApplication application;
+    private final long timerStart = System.nanoTime();
 
     @Override
     public void init() {
@@ -44,5 +45,10 @@ public final class StubRenderer implements ScratchRenderer {
     @Override
     public boolean keyPressed(int glfwKey) {
         return false;
+    }
+
+    @Override
+    public double getAbsoluteTimer() {
+        return (System.nanoTime() - timerStart) / 1e9;
     }
 }

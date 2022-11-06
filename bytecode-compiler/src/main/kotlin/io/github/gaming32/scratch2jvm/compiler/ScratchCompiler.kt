@@ -538,6 +538,13 @@ public class ScratchCompiler private constructor(
                     }
                 }
             }
+            ScratchOpcodes.MOTION_POINTINDIRECTION -> {
+                if (!target.isStage) {
+                    aload_0
+                    compileInput(block.inputs.getValue("DIRECTION"), CompileDataType.NUMBER)
+                    invokevirtual(SPRITE_BASE, "setDirection", void, double)
+                }
+            }
             ScratchOpcodes.MOTION_SETX,
             ScratchOpcodes.MOTION_SETY -> {
                 if (!target.isStage) {
@@ -557,6 +564,13 @@ public class ScratchCompiler private constructor(
                     compileInput(block.inputs.getValue("D$axis"), CompileDataType.NUMBER)
                     dadd
                     invokevirtual(SPRITE_BASE, "set$axis", void, double)
+                }
+            }
+            ScratchOpcodes.MOTION_SETROTATIONSTYLE -> {
+                if (!target.isStage) {
+                    aload_0
+                    push_int(ScratchTarget.ROTATION_NAMES.indexOf(block.fields.getValue("STYLE").name))
+                    putfield(SPRITE_BASE, "rotationStyle", byte)
                 }
             }
             ScratchOpcodes.MOTION_XPOSITION,
@@ -581,9 +595,9 @@ public class ScratchCompiler private constructor(
                 invokestatic(SCRATCH_ABI, "say", void, TARGET_BASE, String::class)
             }
             ScratchOpcodes.EVENT_WHENFLAGCLICKED -> {}
-            ScratchOpcodes.CONTROL_FOREVER -> {
+            ScratchOpcodes.CONTROL_FOREVER -> run {
                 val label = addAsyncLabel()
-                compileInput(block.inputs.getValue("SUBSTACK"))
+                block.inputs["SUBSTACK"]?.let { compileInput(it) }
                 if (warp) {
                     goto(L[label])
                 } else {
@@ -701,6 +715,15 @@ public class ScratchCompiler private constructor(
                 invokeinterface(SCRATCH_RENDERER, "isMouseDown", boolean)
                 if (type != CompileDataType.BOOLEAN) {
                     invokestatic(Boolean::class.javaObjectType, "toString", String::class, boolean)
+                }
+            }
+            ScratchOpcodes.SENSING_TIMER -> {
+                getstatic(SCRATCH_ABI, "RENDERER", SCRATCH_RENDERER)
+                invokeinterface(SCRATCH_RENDERER, "getAbsoluteTimer", double)
+                getstatic(SCRATCH_ABI, "timerStart", double)
+                dsub
+                if (type != CompileDataType.NUMBER) {
+                    invokestatic(SCRATCH_ABI, "doubleToString", String::class, double)
                 }
             }
             ScratchOpcodes.OPERATOR_ADD,

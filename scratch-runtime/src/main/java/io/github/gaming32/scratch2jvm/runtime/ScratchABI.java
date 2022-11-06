@@ -21,6 +21,7 @@ public final class ScratchABI {
     public static final boolean DO_LOGGING;
     public static final AsyncScheduler SCHEDULER = new AsyncScheduler();
     public static final ScratchRenderer RENDERER;
+    public static double timerStart = 0;
 
     static {
         boolean headless = Boolean.getBoolean("scratch.headless");

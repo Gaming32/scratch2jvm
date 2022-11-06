@@ -21,14 +21,9 @@ public data class ScratchTarget(
     public val size: Double = 100.0,
     public val direction: Double = 90.0,
     public val draggable: Boolean = false,
-    public val rotationStyle: Byte = ROTATION_ALL_AROUND,
+    public val rotationStyle: RotationStyle = RotationStyle.DONT_ROTATE,
 ) : PrettyPrintable {
     public companion object {
-        public const val ROTATION_LEFT_RIGHT: Byte = 0
-        public const val ROTATION_DONT_ROTATE: Byte = 1
-        public const val ROTATION_ALL_AROUND: Byte = 2
-        public val ROTATION_NAMES: List<String> = listOf("left-right", "don't rotate", "all around")
-
         @JvmStatic
         public fun fromJson(
             data: JsonObject,
@@ -85,8 +80,25 @@ public data class ScratchTarget(
                 size = data["size"]?.asDouble ?: 100.0,
                 direction = data["direction"]?.asDouble ?: 90.0,
                 draggable = data["draggable"]?.asBoolean ?: false,
-                rotationStyle = ROTATION_NAMES.indexOf(data["rotationStyle"]?.asString).toByte(),
+                rotationStyle = data["rotationStyle"]
+                    ?.asString
+                    ?.let { RotationStyle.fromName(it) }
+                    ?: RotationStyle.DONT_ROTATE,
             )
+        }
+    }
+
+    public enum class RotationStyle {
+        LEFT_RIGHT, DONT_ROTATE, ALL_AROUND;
+
+        public companion object {
+            @JvmStatic
+            public fun fromName(name: String): RotationStyle = when (name) {
+                "left-right" -> LEFT_RIGHT
+                "don't rotate" -> DONT_ROTATE
+                "all around" -> ALL_AROUND
+                else -> throw IllegalArgumentException("Unknown rotation style $name")
+            }
         }
     }
 }

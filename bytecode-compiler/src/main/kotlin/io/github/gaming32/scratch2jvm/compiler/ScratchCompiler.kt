@@ -38,6 +38,7 @@ public class ScratchCompiler private constructor(
         public const val TARGET_BASE: String = "$TARGET_PACKAGE/Target"
         public const val STAGE_BASE: String = "$TARGET_PACKAGE/Stage"
         public const val SPRITE_BASE: String = "$TARGET_PACKAGE/Sprite"
+        public const val ROTATION_STYLE: String = "$TARGET_PACKAGE/RotationStyle"
         private const val UTIL_PACKAGE: String = "$RUNTIME_PACKAGE/util"
         public const val NAMED_INDEXED_ARRAY: String = "$UTIL_PACKAGE/NamedIndexedArray"
 
@@ -228,8 +229,8 @@ public class ScratchCompiler private constructor(
                                 }
                                 putfield(SPRITE_BASE, "draggable", boolean)
                                 aload_0
-                                push_int(target.rotationStyle.toInt())
-                                putfield(SPRITE_BASE, "rotationStyle", byte)
+                                getstatic(ROTATION_STYLE, target.rotationStyle.name, ROTATION_STYLE)
+                                putfield(SPRITE_BASE, "rotationStyle", ROTATION_STYLE)
                             }
                             _return
                         }
@@ -569,8 +570,12 @@ public class ScratchCompiler private constructor(
             ScratchOpcodes.MOTION_SETROTATIONSTYLE -> {
                 if (!target.isStage) {
                     aload_0
-                    push_int(ScratchTarget.ROTATION_NAMES.indexOf(block.fields.getValue("STYLE").name))
-                    putfield(SPRITE_BASE, "rotationStyle", byte)
+                    getstatic(
+                        ROTATION_STYLE,
+                        ScratchTarget.RotationStyle.fromName(block.fields.getValue("STYLE").name).name,
+                        ROTATION_STYLE
+                    )
+                    putfield(SPRITE_BASE, "rotationStyle", ROTATION_STYLE)
                 }
             }
             ScratchOpcodes.MOTION_XPOSITION,

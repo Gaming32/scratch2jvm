@@ -3,6 +3,7 @@ package io.github.gaming32.scratch2jvm.runtime.renderer;
 import io.github.gaming32.scratch2jvm.runtime.ScratchApplication;
 import io.github.gaming32.scratch2jvm.runtime.ScratchCostume;
 import io.github.gaming32.scratch2jvm.runtime.async.AsyncScheduler;
+import io.github.gaming32.scratch2jvm.runtime.target.RotationStyle;
 import io.github.gaming32.scratch2jvm.runtime.target.Sprite;
 import io.github.gaming32.scratch2jvm.runtime.target.Target;
 import org.joml.Vector2i;
@@ -133,7 +134,7 @@ public final class GlRenderer implements ScratchRenderer {
         for (final Target target : scheduler.getTargets()) {
             final ScratchCostume costume = target.costumes.get(target.costume);
             double x = 0, y = 0, scale = 1, direction = 90;
-            int rotationStyle = 0;
+            RotationStyle rotationStyle = RotationStyle.DONT_ROTATE;
             if (target instanceof Sprite) {
                 final Sprite sprite = (Sprite)target;
                 x = sprite.x;
@@ -150,11 +151,9 @@ public final class GlRenderer implements ScratchRenderer {
             glMatrixMode(GL_MODELVIEW);
             glPushMatrix();
             glTranslatef((float)x, (float)y, 0);
-            if (rotationStyle == 2) {
-                // all around
+            if (rotationStyle == RotationStyle.ALL_AROUND) {
                 glRotatef((float)(-direction + 90), 0, 0, 1);
-            } else if (rotationStyle == 0 && direction < 0) {
-                // left-right
+            } else if (rotationStyle == RotationStyle.LEFT_RIGHT && direction < 0) {
                 glScalef(-1, 1, 1);
             }
             glTranslatef(

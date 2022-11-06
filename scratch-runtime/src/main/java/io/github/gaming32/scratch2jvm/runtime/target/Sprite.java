@@ -10,7 +10,7 @@ import org.joml.Math;
 public abstract class Sprite extends Target {
     public double x, y, size, direction;
     public boolean draggable;
-    public byte rotationStyle;
+    public RotationStyle rotationStyle;
 
     protected Sprite(String name, NamedIndexedArray<ScratchCostume> costumes) {
         super(name, false, costumes);

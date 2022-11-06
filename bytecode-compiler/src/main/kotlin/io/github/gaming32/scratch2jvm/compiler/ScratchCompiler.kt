@@ -623,17 +623,29 @@ public class ScratchCompiler private constructor(
                 }
             }
             ScratchOpcodes.CONTROL_IF -> {
-                compileInput(block.inputs.getValue("CONDITION"), CompileDataType.BOOLEAN)
+                val condition = block.inputs.getValue("CONDITION")
                 L.scope(this).also { l ->
-                    ifeq(l["condition_false"])
+                    if (condition is BlockStackInput && condition.value.opcode == ScratchOpcodes.OPERATOR_NOT) {
+                        compileInput(condition.value.inputs.getValue("OPERAND"), CompileDataType.BOOLEAN)
+                        ifne(l["condition_false"])
+                    } else {
+                        compileInput(condition, CompileDataType.BOOLEAN)
+                        ifeq(l["condition_false"])
+                    }
                     compileInput(block.inputs.getValue("SUBSTACK"))
                     +l["condition_false"]
                 }
             }
             ScratchOpcodes.CONTROL_IF_ELSE -> {
-                compileInput(block.inputs.getValue("CONDITION"), CompileDataType.BOOLEAN)
+                val condition = block.inputs.getValue("CONDITION")
                 L.scope(this).also { l ->
-                    ifeq(l["condition_false"])
+                    if (condition is BlockStackInput && condition.value.opcode == ScratchOpcodes.OPERATOR_NOT) {
+                        compileInput(condition.value.inputs.getValue("OPERAND"), CompileDataType.BOOLEAN)
+                        ifne(l["condition_false"])
+                    } else {
+                        compileInput(condition, CompileDataType.BOOLEAN)
+                        ifeq(l["condition_false"])
+                    }
                     compileInput(block.inputs.getValue("SUBSTACK"))
                     goto(l["if_end"])
                     +l["condition_false"]
@@ -643,9 +655,15 @@ public class ScratchCompiler private constructor(
             }
             ScratchOpcodes.CONTROL_WAIT_UNTIL -> {
                 val label = addAsyncLabel()
-                compileInput(block.inputs.getValue("CONDITION"), CompileDataType.BOOLEAN)
+                val condition = block.inputs.getValue("CONDITION")
                 L.scope(this).also { l ->
-                    ifne(l["wait_end"])
+                    if (condition is BlockStackInput && condition.value.opcode == ScratchOpcodes.OPERATOR_NOT) {
+                        compileInput(condition.value.inputs.getValue("OPERAND"), CompileDataType.BOOLEAN)
+                        ifeq(l["wait_end"])
+                    } else {
+                        compileInput(condition, CompileDataType.BOOLEAN)
+                        ifne(l["wait_end"])
+                    }
                     push_int(label)
                     ireturn
                     +l["wait_end"]
@@ -742,9 +760,9 @@ public class ScratchCompiler private constructor(
                 }
             }
             ScratchOpcodes.OPERATOR_NOT -> {
-                iconst_1
                 compileInput(block.inputs.getValue("OPERAND"), CompileDataType.BOOLEAN)
-                isub
+                iconst_1
+                ixor
                 if (type != CompileDataType.BOOLEAN) {
                     invokestatic(Boolean::class.javaObjectType, "toString", String::class, boolean)
                 }

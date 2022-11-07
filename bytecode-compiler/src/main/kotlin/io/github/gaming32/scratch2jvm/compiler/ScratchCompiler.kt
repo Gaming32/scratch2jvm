@@ -483,6 +483,13 @@ public class ScratchCompiler private constructor(
         type: CompileDataType = CompileDataType.DEFAULT
     ) {
         when (block.opcode) {
+            ScratchOpcodes.MOTION_MOVESTEPS -> {
+                if (!target.isStage) {
+                    aload_0
+                    compileInput(block.inputs.getValue("STEPS"), CompileDataType.NUMBER)
+                    invokevirtual(SPRITE_BASE, "moveSteps", void, double)
+                }
+            }
             ScratchOpcodes.MOTION_GOTO,
             ScratchOpcodes.MOTION_GOTOXY -> {
                 if (!target.isStage) {
@@ -563,15 +570,6 @@ public class ScratchCompiler private constructor(
                     invokevirtual(SPRITE_BASE, "pointTowardsMouse", void)
                 }
             }
-            ScratchOpcodes.MOTION_SETX,
-            ScratchOpcodes.MOTION_SETY -> {
-                if (!target.isStage) {
-                    val axis = if (block.opcode == ScratchOpcodes.MOTION_SETX) "X" else "Y"
-                    aload_0
-                    compileInput(block.inputs.getValue(axis), CompileDataType.NUMBER)
-                    invokevirtual(SPRITE_BASE, "set$axis", void, double)
-                }
-            }
             ScratchOpcodes.MOTION_CHANGEXBY,
             ScratchOpcodes.MOTION_CHANGEYBY -> {
                 if (!target.isStage) {
@@ -582,6 +580,21 @@ public class ScratchCompiler private constructor(
                     compileInput(block.inputs.getValue("D$axis"), CompileDataType.NUMBER)
                     dadd
                     invokevirtual(SPRITE_BASE, "set$axis", void, double)
+                }
+            }
+            ScratchOpcodes.MOTION_SETX,
+            ScratchOpcodes.MOTION_SETY -> {
+                if (!target.isStage) {
+                    val axis = if (block.opcode == ScratchOpcodes.MOTION_SETX) "X" else "Y"
+                    aload_0
+                    compileInput(block.inputs.getValue(axis), CompileDataType.NUMBER)
+                    invokevirtual(SPRITE_BASE, "set$axis", void, double)
+                }
+            }
+            ScratchOpcodes.MOTION_IFONEDGEBOUNCE -> {
+                if (!target.isStage) {
+                    aload_0
+                    invokevirtual(SPRITE_BASE, "ifOnEdgeBounce", void)
                 }
             }
             ScratchOpcodes.MOTION_SETROTATIONSTYLE -> {

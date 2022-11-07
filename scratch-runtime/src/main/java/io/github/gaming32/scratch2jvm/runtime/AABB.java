@@ -2,12 +2,12 @@ package io.github.gaming32.scratch2jvm.runtime;
 
 @SuppressWarnings("unused")
 public final class AABB {
-    public final double leftX, bottomY, rightX, topY;
+    public final double leftX, rightX, bottomY, topY;
 
-    public AABB(double leftX, double bottomY, double rightX, double topY) {
+    public AABB(double leftX, double rightX, double bottomY, double topY) {
         this.leftX = leftX;
-        this.bottomY = bottomY;
         this.rightX = rightX;
+        this.bottomY = bottomY;
         this.topY = topY;
     }
 

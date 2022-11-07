@@ -1,6 +1,7 @@
 package io.github.gaming32.scratch2jvm.parser.ast
 
 public enum class ScratchOpcodes(public val id: String) {
+    MOTION_MOVESTEPS("motion_movesteps"),
     MOTION_GOTO("motion_goto"),
     MOTION_GOTO_MENU("motion_goto_menu"),
     MOTION_GOTOXY("motion_gotoxy"),
@@ -14,6 +15,7 @@ public enum class ScratchOpcodes(public val id: String) {
     MOTION_SETX("motion_setx"),
     MOTION_CHANGEYBY("motion_changeyby"),
     MOTION_SETY("motion_sety"),
+    MOTION_IFONEDGEBOUNCE("motion_ifonedgebounce"),
     MOTION_SETROTATIONSTYLE("motion_setrotationstyle"),
     MOTION_XPOSITION("motion_xposition"),
     MOTION_YPOSITION("motion_yposition"),
@@ -82,6 +84,7 @@ public enum class ScratchOpcodes(public val id: String) {
 }
 
 public object MotionOpcodes {
+    public val MOVE_STEPS: ScratchOpcodes = ScratchOpcodes.MOTION_MOVESTEPS
     public val GOTO: ScratchOpcodes = ScratchOpcodes.MOTION_GOTO
     public val GOTO_X_Y: ScratchOpcodes = ScratchOpcodes.MOTION_GOTOXY
     public val GLIDE_TO: ScratchOpcodes = ScratchOpcodes.MOTION_GLIDETO
@@ -92,6 +95,7 @@ public object MotionOpcodes {
     public val SET_X: ScratchOpcodes = ScratchOpcodes.MOTION_SETX
     public val CHANGE_Y_BY: ScratchOpcodes = ScratchOpcodes.MOTION_CHANGEYBY
     public val SET_Y: ScratchOpcodes = ScratchOpcodes.MOTION_SETY
+    public val IF_ON_EDGE_BOUNCE: ScratchOpcodes = ScratchOpcodes.MOTION_IFONEDGEBOUNCE
     public val SET_ROTATION_STYLE: ScratchOpcodes = ScratchOpcodes.MOTION_SETROTATIONSTYLE
     public val X_POSITION: ScratchOpcodes = ScratchOpcodes.MOTION_XPOSITION
     public val Y_POSITION: ScratchOpcodes = ScratchOpcodes.MOTION_YPOSITION

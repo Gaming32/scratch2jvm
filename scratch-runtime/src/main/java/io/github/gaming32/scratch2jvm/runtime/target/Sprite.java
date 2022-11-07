@@ -53,6 +53,33 @@ public abstract class Sprite extends Target {
         this.y = y;
     }
 
+    public final void moveSteps(double steps) {
+        setX(x + Math.sin(Math.toRadians(direction)) * steps);
+        setY(y + Math.cos(Math.toRadians(direction)) * steps);
+    }
+
+    public final void ifOnEdgeBounce() {
+        final AABB aabb = getBounds();
+        if (aabb.leftX <= -240) {
+            if (direction < 0) {
+                setDirection(-direction);
+            }
+        } else if (aabb.rightX >= 240) {
+            if (direction > 0) {
+                setDirection(-direction);
+            }
+        }
+        if (aabb.bottomY <= -180) {
+            if (direction < -90 || direction > 90) {
+                setDirection(-direction + 180);
+            }
+        } else if (aabb.topY >= 180) {
+            if (direction > -90 && direction < 90) {
+                setDirection(-direction + 180);
+            }
+        }
+    }
+
     public final void setDirection(double direction) {
         direction = ScratchABI.mod(direction, 360);
         this.direction = direction > 180 ? direction - 360 : direction;

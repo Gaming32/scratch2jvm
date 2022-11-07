@@ -141,7 +141,8 @@ public final class AsyncScheduler {
                         job.label = state;
                     }
                 }
-                if (ScratchABI.RENDERER.render(this)) break;
+                if (ScratchABI.RENDERER.tick(this)) break;
+                ScratchABI.RENDERER.render(this);
             } while (hasJobs);
         } finally {
             ScratchABI.RENDERER.quit();

@@ -14,8 +14,12 @@ public final class StubRenderer implements ScratchRenderer {
     }
 
     @Override
-    public boolean render(AsyncScheduler scheduler) {
+    public boolean tick(AsyncScheduler scheduler) {
         return false;
+    }
+
+    @Override
+    public void render(AsyncScheduler scheduler) {
     }
 
     @Override

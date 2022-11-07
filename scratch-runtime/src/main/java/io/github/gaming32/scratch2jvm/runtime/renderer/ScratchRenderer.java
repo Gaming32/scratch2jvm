@@ -10,7 +10,9 @@ public interface ScratchRenderer {
     /**
      * @return Whether the application should exit
      */
-    boolean render(AsyncScheduler scheduler);
+    boolean tick(AsyncScheduler scheduler);
+
+    void render(AsyncScheduler scheduler);
 
     void quit();
 

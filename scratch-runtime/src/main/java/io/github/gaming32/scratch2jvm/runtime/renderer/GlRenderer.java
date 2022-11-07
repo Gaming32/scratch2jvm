@@ -125,7 +125,7 @@ public final class GlRenderer implements ScratchRenderer {
     }
 
     @Override
-    public boolean render(AsyncScheduler scheduler) {
+    public boolean tick(AsyncScheduler scheduler) {
         glfwPollEvents();
         if (glfwWindowShouldClose(window)) return true;
         if (application.framerate > 0) {
@@ -135,6 +135,11 @@ public final class GlRenderer implements ScratchRenderer {
             }
             lastTime = glfwGetTime();
         }
+        return false;
+    }
+
+    @Override
+    public void render(AsyncScheduler scheduler) {
         glClear(GL_COLOR_BUFFER_BIT);
         glColor3f(1, 1, 1);
         glEnable(GL_TEXTURE_2D);
@@ -184,7 +189,6 @@ public final class GlRenderer implements ScratchRenderer {
             quad(-240, 180, 240, 190 + barY);
         }
         glfwSwapBuffers(window);
-        return false;
     }
 
     private int getCostumeTex(ScratchCostume costume, double scale) {

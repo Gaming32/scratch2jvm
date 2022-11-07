@@ -488,6 +488,7 @@ public class ScratchCompiler private constructor(
                     aload_0
                     compileInput(block.inputs.getValue("STEPS"), CompileDataType.NUMBER)
                     invokevirtual(SPRITE_BASE, "moveSteps", void, double)
+                    maybeRedraw()
                 }
             }
             ScratchOpcodes.MOTION_TURNRIGHT,
@@ -503,6 +504,7 @@ public class ScratchCompiler private constructor(
                         dsub
                     }
                     invokevirtual(SPRITE_BASE, "setDirection", void, double)
+                    maybeRedraw()
                 }
             }
             ScratchOpcodes.MOTION_GOTO,
@@ -535,6 +537,7 @@ public class ScratchCompiler private constructor(
                         compileInput(block.inputs.getValue("Y"), CompileDataType.NUMBER)
                         invokevirtual(SPRITE_BASE, "setXY", void, double, double)
                     }
+                    maybeRedraw()
                 }
             }
             ScratchOpcodes.MOTION_GLIDETO,
@@ -577,12 +580,14 @@ public class ScratchCompiler private constructor(
                     aload_0
                     compileInput(block.inputs.getValue("DIRECTION"), CompileDataType.NUMBER)
                     invokevirtual(SPRITE_BASE, "setDirection", void, double)
+                    maybeRedraw()
                 }
             }
             ScratchOpcodes.MOTION_POINTTOWARDS -> {
                 if (!target.isStage) {
                     aload_0
                     invokevirtual(SPRITE_BASE, "pointTowardsMouse", void)
+                    maybeRedraw()
                 }
             }
             ScratchOpcodes.MOTION_CHANGEXBY,
@@ -595,6 +600,7 @@ public class ScratchCompiler private constructor(
                     compileInput(block.inputs.getValue("D$axis"), CompileDataType.NUMBER)
                     dadd
                     invokevirtual(SPRITE_BASE, "set$axis", void, double)
+                    maybeRedraw()
                 }
             }
             ScratchOpcodes.MOTION_SETX,
@@ -604,12 +610,14 @@ public class ScratchCompiler private constructor(
                     aload_0
                     compileInput(block.inputs.getValue(axis), CompileDataType.NUMBER)
                     invokevirtual(SPRITE_BASE, "set$axis", void, double)
+                    maybeRedraw()
                 }
             }
             ScratchOpcodes.MOTION_IFONEDGEBOUNCE -> {
                 if (!target.isStage) {
                     aload_0
                     invokevirtual(SPRITE_BASE, "ifOnEdgeBounce", void)
+                    maybeRedraw()
                 }
             }
             ScratchOpcodes.MOTION_SETROTATIONSTYLE -> {
@@ -621,6 +629,7 @@ public class ScratchCompiler private constructor(
                         ROTATION_STYLE
                     )
                     putfield(SPRITE_BASE, "rotationStyle", ROTATION_STYLE)
+                    maybeRedraw()
                 }
             }
             ScratchOpcodes.MOTION_XPOSITION,
@@ -643,6 +652,7 @@ public class ScratchCompiler private constructor(
                 aload_0
                 compileInput(block.inputs.getValue("MESSAGE"))
                 invokestatic(SCRATCH_ABI, "say", void, TARGET_BASE, String::class)
+                maybeRedraw()
             }
             ScratchOpcodes.EVENT_WHENFLAGCLICKED -> {}
             ScratchOpcodes.CONTROL_FOREVER -> run {
@@ -1063,8 +1073,22 @@ public class ScratchCompiler private constructor(
         body()
         invokevirtual(ASYNC_SCHEDULER, "scheduleJob", SCHEDULED_JOB, TARGET_BASE, SCHEDULED_JOB)
         putfield(SCHEDULED_JOB, "awaiting", SCHEDULED_JOB)
+        yield()
+    }
+
+    private fun MethodAssembly.yield() {
         push_int(labelIndex)
         ireturn
         addAsyncLabel()
+    }
+
+    private fun MethodAssembly.maybeRedraw() {
+        // TODO: figure this out
+//        if (!warp) {
+//            // TODO: check visibility
+//            getstatic(SCRATCH_ABI, "RENDERER", SCRATCH_RENDERER)
+//            getstatic(SCRATCH_ABI, "SCHEDULER", ASYNC_SCHEDULER)
+//            invokeinterface(SCRATCH_RENDERER, "render", void, ASYNC_SCHEDULER)
+//        }
     }
 }

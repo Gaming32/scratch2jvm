@@ -20,4 +20,8 @@ public abstract class Target {
     }
 
     public abstract void registerEvents(AsyncScheduler scheduler);
+
+    public final ScratchCostume getCostume() {
+        return costumes.get(costume);
+    }
 }

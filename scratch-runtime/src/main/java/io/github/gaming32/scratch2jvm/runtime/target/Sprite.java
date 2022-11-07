@@ -1,5 +1,6 @@
 package io.github.gaming32.scratch2jvm.runtime.target;
 
+import io.github.gaming32.scratch2jvm.runtime.AABB;
 import io.github.gaming32.scratch2jvm.runtime.ScratchABI;
 import io.github.gaming32.scratch2jvm.runtime.ScratchCostume;
 import io.github.gaming32.scratch2jvm.runtime.async.ScheduledJob;
@@ -16,19 +17,40 @@ public abstract class Sprite extends Target {
         super(name, false, costumes);
     }
 
+    public final AABB getBounds() {
+        final ScratchCostume costume = getCostume();
+        final double leftX = x - costume.centerX;
+        final double topY = y + costume.centerY;
+        return new AABB(leftX, leftX + costume.width, topY - costume.height, topY);
+    }
+
     public final void setXY(double x, double y) {
         setX(x);
         setY(y);
     }
 
     public final void setX(double x) {
-        final double dist = 225 + costumes.get(costume).centerX;
-        this.x = Math.clamp(-dist, dist, x);
+        final ScratchCostume costume = getCostume();
+        final double leftX = x - costume.centerX;
+        final double rightX = leftX + costume.width;
+        if (rightX < -230) {
+            x = -230 + costume.centerX - costume.width;
+        } else if (leftX > 230) {
+            x = 230 + costume.centerX;
+        }
+        this.x = x;
     }
 
     public final void setY(double y) {
-        final double dist = 165 + costumes.get(costume).centerY;
-        this.y = Math.clamp(-dist, dist, y);
+        final ScratchCostume costume = getCostume();
+        final double topY = y + costume.centerY;
+        final double bottomY = topY - costume.height;
+        if (topY < -170) {
+            y = -170 - costume.centerY;
+        } else if (bottomY > 170) {
+            y = 170 - costume.centerY + costume.height;
+        }
+        this.y = y;
     }
 
     public final void setDirection(double direction) {
@@ -50,11 +72,19 @@ public abstract class Sprite extends Target {
         setXY(xBuf[0], yBuf[0]);
     }
 
+    public final void gotoSprite(Sprite sprite) {
+        setXY(sprite.x, sprite.y);
+    }
+
     public final ScheduledJob glideToMousePosition(double secs) {
         final double[] xBuf = new double[1];
         final double[] yBuf = new double[1];
         ScratchABI.RENDERER.getMousePos(xBuf, yBuf);
         return glideTo(secs, xBuf[0], yBuf[0]);
+    }
+
+    public final ScheduledJob glideToSprite(double secs, Sprite sprite) {
+        return glideTo(secs, sprite.x, sprite.y);
     }
 
     public final ScheduledJob glideTo(double secs, double targetX, double targetY) {
@@ -76,5 +106,22 @@ public abstract class Sprite extends Target {
             );
             return 0;
         });
+    }
+
+    public final boolean touchingEdge() {
+        final ScratchCostume costume = costumes.get(this.costume);
+        final double leftX = x - costume.centerX;
+        if (leftX <= -240 || leftX + costume.width >= 240) {
+            return true;
+        }
+        final double topY = y + costume.centerY;
+        return topY >= 180 || topY - costume.height <= -180;
+    }
+
+    public final boolean touchingMouse() {
+        final double[] xBuf = new double[1];
+        final double[] yBuf = new double[1];
+        ScratchABI.RENDERER.getMousePos(xBuf, yBuf);
+        return getBounds().contains(xBuf[0], yBuf[0]);
     }
 }

@@ -139,7 +139,7 @@ public final class GlRenderer implements ScratchRenderer {
         glColor3f(1, 1, 1);
         glEnable(GL_TEXTURE_2D);
         for (final Target target : scheduler.getTargets()) {
-            final ScratchCostume costume = target.costumes.get(target.costume);
+            final ScratchCostume costume = target.getCostume();
             double x = 0, y = 0, scale = 1, direction = 90;
             RotationStyle rotationStyle = RotationStyle.DONT_ROTATE;
             if (target instanceof Sprite) {

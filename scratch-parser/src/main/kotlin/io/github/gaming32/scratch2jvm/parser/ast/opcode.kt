@@ -30,6 +30,8 @@ public enum class ScratchOpcodes(public val id: String) {
     CONTROL_WAIT_UNTIL("control_wait_until"),
     CONTROL_STOP("control_stop"),
 
+    SENSING_TOUCHINGOBJECT("sensing_touchingobject"),
+    SENSING_TOUCHINGOBJECTMENU("sensing_touchingobjectmenu"),
     SENSING_KEYPRESSED("sensing_keypressed"),
     SENSING_KEYOPTIONS("sensing_keyoptions"),
     SENSING_MOUSEDOWN("sensing_mousedown"),
@@ -112,8 +114,10 @@ public object ControlOpcodes {
 }
 
 public object SensingOpcodes {
+    public val TOUCHING_OBJECT: ScratchOpcodes = ScratchOpcodes.SENSING_TOUCHINGOBJECT
     public val KEY_PRESSED: ScratchOpcodes = ScratchOpcodes.SENSING_KEYPRESSED
     public val MOUSE_DOWN: ScratchOpcodes = ScratchOpcodes.SENSING_MOUSEDOWN
+    public val TIMER: ScratchOpcodes = ScratchOpcodes.SENSING_TIMER
 }
 
 public object OperatorsOpcodes {

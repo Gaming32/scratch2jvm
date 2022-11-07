@@ -28,6 +28,7 @@ public class ScratchCompiler private constructor(
         public const val SCRATCH_APPLICATION: String = "$RUNTIME_PACKAGE/ScratchApplication"
         public const val SCRATCH_COSTUME: String = "$RUNTIME_PACKAGE/ScratchCostume"
         public const val SCRATCH_COSTUME_FORMAT: String = "$SCRATCH_COSTUME\$Format"
+        public const val AABB_CLASS: String = "$RUNTIME_PACKAGE/AABB"
         private const val ASYNC_PACKAGE: String = "$RUNTIME_PACKAGE/async"
         public const val ASYNC_HANDLER: String = "$ASYNC_PACKAGE/AsyncHandler"
         public const val ASYNC_SCHEDULER: String = "$ASYNC_PACKAGE/AsyncScheduler"
@@ -488,7 +489,7 @@ public class ScratchCompiler private constructor(
                     aload_0
                     if (block.opcode == ScratchOpcodes.MOTION_GOTO) {
                         val toBlock = (block.inputs.getValue("TO") as ReferenceInput).value
-                        when (toBlock.fields.getValue("TO").name) {
+                        when (val dest = toBlock.fields.getValue("TO").name) {
                             "_mouse_" -> {
                                 invokevirtual(SPRITE_BASE, "gotoMousePosition", void)
                             }
@@ -500,6 +501,11 @@ public class ScratchCompiler private constructor(
                                 push_double(180.0)
                                 invokestatic(SCRATCH_ABI, "random", double, double, double)
                                 invokevirtual(SPRITE_BASE, "setXY", void, double, double)
+                            }
+                            else -> {
+                                val destClass = escapePackageName("scratch", projectName, "target", dest)
+                                getstatic(destClass, "INSTANCE", destClass)
+                                invokevirtual(SPRITE_BASE, "gotoSprite", void, SPRITE_BASE)
                             }
                         }
                     } else {
@@ -517,7 +523,7 @@ public class ScratchCompiler private constructor(
                         compileInput(block.inputs.getValue("SECS"), CompileDataType.NUMBER)
                         if (block.opcode == ScratchOpcodes.MOTION_GLIDETO) {
                             val toBlock = (block.inputs.getValue("TO") as ReferenceInput).value
-                            when (toBlock.fields.getValue("TO").name) {
+                            when (val dest = toBlock.fields.getValue("TO").name) {
                                 "_mouse_" -> {
                                     invokevirtual(SPRITE_BASE, "glideToMousePosition", SCHEDULED_JOB, double)
                                 }
@@ -529,6 +535,11 @@ public class ScratchCompiler private constructor(
                                     push_double(180.0)
                                     invokestatic(SCRATCH_ABI, "random", double, double, double)
                                     invokevirtual(SPRITE_BASE, "glideTo", SCHEDULED_JOB, double, double, double)
+                                }
+                                else -> {
+                                    val destClass = escapePackageName("scratch", projectName, "target", dest)
+                                    getstatic(destClass, "INSTANCE", destClass)
+                                    invokevirtual(SPRITE_BASE, "glideToSprite", void, double, SPRITE_BASE)
                                 }
                             }
                         } else {
@@ -710,6 +721,31 @@ public class ScratchCompiler private constructor(
                     invokevirtual(ASYNC_SCHEDULER, "cancelJobs", void, TARGET_BASE, SCHEDULED_JOB)
                 }
                 else -> throw IllegalArgumentException("Unknown control_stop STOP_OPTION $stopOption")
+            }
+            ScratchOpcodes.SENSING_TOUCHINGOBJECT -> {
+                if (!target.isStage) {
+                    aload_0
+                    val menu = (block.inputs.getValue("TOUCHINGOBJECTMENU") as ReferenceInput).value
+                    when (val target = menu.fields.getValue("TOUCHINGOBJECTMENU").name) {
+                        "_edge_" -> {
+                            invokevirtual(SPRITE_BASE, "touchingEdge", boolean)
+                        }
+                        "_mouse_" -> {
+                            invokevirtual(SPRITE_BASE, "touchingMouse", boolean)
+                        }
+                        else -> {
+                            val destClass = escapePackageName("scratch", projectName, "target", target)
+                            getstatic(destClass, "INSTANCE", destClass)
+                            invokevirtual(SPRITE_BASE, "getBounds", AABB_CLASS)
+                            invokevirtual(AABB_CLASS, "intersects", boolean, AABB_CLASS)
+                        }
+                    }
+                } else {
+                    iload_1
+                }
+                if (type != CompileDataType.BOOLEAN) {
+                    invokestatic(Boolean::class.javaObjectType, "toString", String::class, boolean)
+                }
             }
             ScratchOpcodes.SENSING_KEYPRESSED -> {
                 getstatic(SCRATCH_ABI, "RENDERER", SCRATCH_RENDERER)

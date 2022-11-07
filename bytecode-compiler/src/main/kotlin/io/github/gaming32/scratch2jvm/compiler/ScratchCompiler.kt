@@ -490,6 +490,21 @@ public class ScratchCompiler private constructor(
                     invokevirtual(SPRITE_BASE, "moveSteps", void, double)
                 }
             }
+            ScratchOpcodes.MOTION_TURNRIGHT,
+            ScratchOpcodes.MOTION_TURNLEFT -> {
+                if (!target.isStage) {
+                    aload_0
+                    dup
+                    getfield(SPRITE_BASE, "direction", double)
+                    compileInput(block.inputs.getValue("DEGREES"), CompileDataType.NUMBER)
+                    if (block.opcode == ScratchOpcodes.MOTION_TURNRIGHT) {
+                        dadd
+                    } else {
+                        dsub
+                    }
+                    invokevirtual(SPRITE_BASE, "setDirection", void, double)
+                }
+            }
             ScratchOpcodes.MOTION_GOTO,
             ScratchOpcodes.MOTION_GOTOXY -> {
                 if (!target.isStage) {

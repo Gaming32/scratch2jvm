@@ -2,6 +2,8 @@ package io.github.gaming32.scratch2jvm.parser.ast
 
 public enum class ScratchOpcodes(public val id: String) {
     MOTION_MOVESTEPS("motion_movesteps"),
+    MOTION_TURNRIGHT("motion_turnright"),
+    MOTION_TURNLEFT("motion_turnleft"),
     MOTION_GOTO("motion_goto"),
     MOTION_GOTO_MENU("motion_goto_menu"),
     MOTION_GOTOXY("motion_gotoxy"),
@@ -85,6 +87,8 @@ public enum class ScratchOpcodes(public val id: String) {
 
 public object MotionOpcodes {
     public val MOVE_STEPS: ScratchOpcodes = ScratchOpcodes.MOTION_MOVESTEPS
+    public val TURN_RIGHT: ScratchOpcodes = ScratchOpcodes.MOTION_TURNRIGHT
+    public val TURN_LEFT: ScratchOpcodes = ScratchOpcodes.MOTION_TURNLEFT
     public val GOTO: ScratchOpcodes = ScratchOpcodes.MOTION_GOTO
     public val GOTO_X_Y: ScratchOpcodes = ScratchOpcodes.MOTION_GOTOXY
     public val GLIDE_TO: ScratchOpcodes = ScratchOpcodes.MOTION_GLIDETO

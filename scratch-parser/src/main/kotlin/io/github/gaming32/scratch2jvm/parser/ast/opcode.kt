@@ -74,6 +74,7 @@ public enum class ScratchOpcodes(public val id: String) {
     PROCEDURES_CALL("procedures_call"),
 
     ARGUMENT_REPORTER_STRING_NUMBER("argument_reporter_string_number"),
+    ARGUMENT_REPORTER_BOOLEAN("argument_reporter_boolean"),
     ;
 
     public companion object {

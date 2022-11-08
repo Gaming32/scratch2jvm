@@ -10,6 +10,7 @@ public data class ScratchTarget(
     public val isStage: Boolean = false,
     public val variables: Map<String, ScratchVariable> = mapOf(),
     public val lists: Map<String, ScratchList> = mapOf(),
+    public val blocks: Map<String, ScratchBlock> = mapOf(),
     public val rootBlocks: Map<String, ScratchBlock> = mapOf(),
     public val currentCostume: Int = 0,
     public val costumes: List<ScratchCostume>,
@@ -45,23 +46,23 @@ public data class ScratchTarget(
                 }
             val scopedLists = stageLists + lists
             val blocksData = data.getAsJsonObject("blocks")
-            val rootBlocks = blocksData
+            val blocks = blocksData
                 .entrySet()
                 .associateTo(mutableMapOf()) { it.key to ScratchBlock.fromJson(it.key, it.value.asJsonObject) }
-            rootBlocks.values.forEach { block ->
+            blocks.values.forEach { block ->
                 val blockData = blocksData[block.id].asJsonObject
                 blockData["next"]?.let { next ->
                     if (!next.isJsonNull) {
-                        block.next = rootBlocks[next.asString]
+                        block.next = blocks[next.asString]
                     }
                 }
                 blockData["parent"]?.let { parent ->
                     if (!parent.isJsonNull) {
-                        block.parent = rootBlocks[parent.asString]
+                        block.parent = blocks[parent.asString]
                     }
                 }
                 blockData["inputs"].asJsonObject.asMap().forEach { (name, value) ->
-                    block.inputsMutable[name] = ScratchInput.parse(value, rootBlocks, scopedVariables, scopedLists)
+                    block.inputsMutable[name] = ScratchInput.parse(value, blocks, scopedVariables, scopedLists)
                 }
             }
             return ScratchTarget(
@@ -69,7 +70,8 @@ public data class ScratchTarget(
                 isStage = data["isStage"].asBoolean,
                 variables = variables,
                 lists = lists,
-                rootBlocks = rootBlocks.filter { it.value.topLevel },
+                blocks = blocks,
+                rootBlocks = blocks.filter { it.value.topLevel },
                 currentCostume = data["currentCostume"].asInt,
                 costumes = data["costumes"].asJsonArray.map { ScratchCostume.fromJson(it.asJsonObject) },
                 volume = data["volume"].asDouble,

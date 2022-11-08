@@ -11,23 +11,25 @@ public class ScratchBlock(
     public val opcode: ScratchOpcodes,
     public val topLevel: Boolean = false,
     public val x: Int = 0, public val y: Int = 0,
-    public val fields: Map<String, BlockField> = mapOf()
+    public val fields: Map<String, BlockField> = mapOf(),
+    public val procedureInfo: ScratchProcedureInfo? = null
 ) : PrettyPrintable {
     internal companion object {
         @JvmStatic
         fun fromJson(id: String, data: JsonObject): ScratchBlock = ScratchBlock(
             id,
             opcode = ScratchOpcodes.fromId(data["opcode"].asString),
-            topLevel = data["topLevel"].asBoolean,
-            x = data["x"]?.asInt ?: 0,
-            y = data["y"]?.asInt ?: 0,
             fields = data["fields"]
                 .asJsonObject
                 .entrySet()
                 .associate { (key, value) ->
                     value as JsonArray
                     key to BlockField(value[0].asString, value[1].asNullableString)
-                }
+                },
+            topLevel = data["topLevel"].asBoolean,
+            x = data["x"]?.asInt ?: 0,
+            y = data["y"]?.asInt ?: 0,
+            procedureInfo = ScratchProcedureInfo.fromJsonOrNull(data["mutation"]?.asJsonObject)
         )
     }
 

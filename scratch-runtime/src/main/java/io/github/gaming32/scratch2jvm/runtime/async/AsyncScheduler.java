@@ -128,7 +128,7 @@ public final class AsyncScheduler {
                                 continue;
                             }
                         }
-                        final int state = job.handler.handle(target, job);
+                        final int state = job.step(target);
                         switch (state) {
                             case SUSPEND_NO_RESCHEDULE:
                                 job.finished = true;

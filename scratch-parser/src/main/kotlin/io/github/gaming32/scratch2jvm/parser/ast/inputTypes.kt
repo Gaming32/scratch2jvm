@@ -56,13 +56,15 @@ public sealed interface ScratchInput<T> : PrettyPrintable {
                 ScratchInputTypes.VARIABLE -> VariableInput(variables.getValue(data[2].asString))
                 ScratchInputTypes.LIST -> ListInput(lists.getValue(data[2].asString))
             }
+        } else if (data.isJsonNull) {
+            ReferenceInput(null)
         } else {
             ReferenceInput(blocks.getValue(data.asString))
         }
     }
 }
 
-public data class ReferenceInput(override val value: ScratchBlock) : ScratchInput<ScratchBlock> {
+public data class ReferenceInput(override val value: ScratchBlock?) : ScratchInput<ScratchBlock?> {
     override val type: ScratchInputTypes get() = ScratchInputTypes.SUBVALUED
 }
 

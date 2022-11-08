@@ -14,6 +14,7 @@ import io.github.gaming32.scratch2jvm.parser.ast.*
 import io.github.gaming32.scratch2jvm.parser.data.ScratchCostume
 import io.github.gaming32.scratch2jvm.parser.data.ScratchProject
 import io.github.gaming32.scratch2jvm.parser.data.ScratchTarget
+import io.github.gaming32.scratch2jvm.parser.falseAndTrue
 import io.github.gaming32.scratch2jvm.parser.prettyPrint
 import org.objectweb.asm.Type
 import java.lang.invoke.*
@@ -60,6 +61,10 @@ public class ScratchCompiler private constructor(
     }
 
     private lateinit var target: ScratchTarget
+    private val procedureBodies = mutableMapOf<String, ScratchBlock>()
+    private val awaitlessProcedures = mutableSetOf<ScratchBlock>()
+    private val procedureArgs = mutableMapOf<ScratchBlock, Map<String, Pair<Int, ScratchBlock>>>()
+    private var currentProcedureArgs = mapOf<String, Pair<Int, ScratchBlock>>()
     private var warp = false
     private var stateIndex = 0
     private var maxStateIndex = 0
@@ -301,51 +306,76 @@ public class ScratchCompiler private constructor(
 
                         val events = mutableListOf<Pair<String, Int>>()
 
-                        for (block in target.rootBlocks.values) {
-                            if (LOGGER.isTraceEnabled) {
-                                LOGGER.trace(block.prettyPrint().toString())
-                            }
-                            method(public, escapeMethodName(block.id), int, SCHEDULED_JOB) {
-                                this@ScratchCompiler.target = target
-                                stateIndex = 0
-                                maxStateIndex = -1
-                                labelIndex = 0
-                                goto(L["main_end_check"])
-                                addAsyncLabel()
-                                compileBlock(block)
-                                push_int(SUSPEND_NO_RESCHEDULE)
-                                ireturn
-                                +L["main_end_check"]
-                                aload_1
-                                getfield(SCHEDULED_JOB, "label", int)
-                                tableswitch(
-                                    0, labelIndex - 1, L["main_unknown_label"],
-                                    if (maxStateIndex != -1) L["main_init_state"] else L[0],
-                                    *Array(labelIndex - 1) { L[it + 1] }
-                                )
-                                if (maxStateIndex != -1) {
-                                    +L["main_init_state"]
-                                    aload_1
-                                    push_int(maxStateIndex + 1)
-                                    newarray(double)
-                                    putfield(SCHEDULED_JOB, "state", DoubleArray::class)
-                                    goto(L[0])
+                        falseAndTrue { nonProcedures ->
+                            val doProcedures = !nonProcedures
+                            for (block in target.rootBlocks.values) {
+                                if ((block.opcode == ScratchOpcodes.PROCEDURES_DEFINITION) != doProcedures) {
+                                    continue
                                 }
-                                +L["main_unknown_label"]
-                                construct(Error::class, void, String::class) {
-                                    construct(StringBuilder::class, void, String::class) {
-                                        ldc("Unknown label: ")
+                                if (LOGGER.isTraceEnabled) {
+                                    LOGGER.trace(block.prettyPrint().toString())
+                                }
+                                method(public, escapeMethodName(block.id), int, SCHEDULED_JOB) {
+                                    this@ScratchCompiler.target = target
+                                    val prototype: ScratchBlock?
+                                    if (doProcedures) {
+                                        prototype = (block.inputs.getValue("custom_block") as ReferenceInput).value!!
+                                        val procedureInfo = prototype.procedureInfo!!
+                                        procedureBodies[procedureInfo.name] = block
+                                        var index = 0
+                                        currentProcedureArgs = procedureInfo.argumentIds.associate {
+                                            val arg = (prototype.inputs.getValue(it) as ReferenceInput).value!!
+                                            arg.fields.getValue("VALUE").name to (index++ to arg)
+                                        }
+                                        procedureArgs[block] = currentProcedureArgs
+                                        warp = procedureInfo.warp
+                                    } else {
+                                        prototype = null
+                                        warp = false
                                     }
+                                    stateIndex = 0
+                                    maxStateIndex = -1
+                                    labelIndex = 0
+                                    goto(L["main_end_check"])
+                                    addAsyncLabel()
+                                    compileBlock(block)
+                                    if (doProcedures && warp && labelIndex == 1) {
+                                        awaitlessProcedures += block
+                                    }
+                                    push_int(SUSPEND_NO_RESCHEDULE)
+                                    ireturn
+                                    +L["main_end_check"]
                                     aload_1
                                     getfield(SCHEDULED_JOB, "label", int)
-                                    invokevirtual(StringBuilder::class, "append", StringBuilder::class, int)
-                                    invokevirtual(StringBuilder::class, "toString", String::class)
+                                    tableswitch(
+                                        0, labelIndex - 1, L["main_unknown_label"],
+                                        if (maxStateIndex != -1) L["main_init_state"] else L[0],
+                                        *Array(labelIndex - 1) { L[it + 1] }
+                                    )
+                                    if (maxStateIndex != -1) {
+                                        +L["main_init_state"]
+                                        aload_1
+                                        push_int(maxStateIndex + 1)
+                                        newarray(double)
+                                        putfield(SCHEDULED_JOB, "state", DoubleArray::class)
+                                        goto(L[0])
+                                    }
+                                    +L["main_unknown_label"]
+                                    construct(Error::class, void, String::class) {
+                                        construct(StringBuilder::class, void, String::class) {
+                                            ldc("Unknown label: ")
+                                        }
+                                        aload_1
+                                        getfield(SCHEDULED_JOB, "label", int)
+                                        invokevirtual(StringBuilder::class, "append", StringBuilder::class, int)
+                                        invokevirtual(StringBuilder::class, "toString", String::class)
+                                    }
+                                    athrow
                                 }
-                                athrow
-                            }
-                            when (block.opcode) {
-                                ScratchOpcodes.EVENT_WHENFLAGCLICKED -> events += Pair(block.id, EVENT_FLAG_CLICKED)
-                                else -> {}
+                                when (block.opcode) {
+                                    ScratchOpcodes.EVENT_WHENFLAGCLICKED -> events += Pair(block.id, EVENT_FLAG_CLICKED)
+                                    else -> {}
+                                }
                             }
                         }
 
@@ -413,7 +443,10 @@ public class ScratchCompiler private constructor(
         type: CompileDataType = CompileDataType.DEFAULT
     ) {
         when (input.type) {
-            ScratchInputTypes.SUBVALUED -> return compileBlock((input as ReferenceInput).value, type)
+            ScratchInputTypes.SUBVALUED -> return compileBlock(
+                (input as ReferenceInput).value ?: return if (type == CompileDataType.BOOLEAN) iconst_0 else ldc(""),
+                type
+            )
             ScratchInputTypes.FALLBACK -> return compileInput((input as FallbackInput<*, *>).primary, type)
             ScratchInputTypes.VALUE -> {
                 val value = (input as ValueInput).value
@@ -513,7 +546,7 @@ public class ScratchCompiler private constructor(
                     aload_0
                     if (block.opcode == ScratchOpcodes.MOTION_GOTO) {
                         val toBlock = (block.inputs.getValue("TO") as ReferenceInput).value
-                        when (val dest = toBlock.fields.getValue("TO").name) {
+                        when (val dest = toBlock!!.fields.getValue("TO").name) {
                             "_mouse_" -> {
                                 invokevirtual(SPRITE_BASE, "gotoMousePosition", void)
                             }
@@ -548,7 +581,7 @@ public class ScratchCompiler private constructor(
                         compileInput(block.inputs.getValue("SECS"), CompileDataType.NUMBER)
                         if (block.opcode == ScratchOpcodes.MOTION_GLIDETO) {
                             val toBlock = (block.inputs.getValue("TO") as ReferenceInput).value
-                            when (val dest = toBlock.fields.getValue("TO").name) {
+                            when (val dest = toBlock!!.fields.getValue("TO").name) {
                                 "_mouse_" -> {
                                     invokevirtual(SPRITE_BASE, "glideToMousePosition", SCHEDULED_JOB, double)
                                 }
@@ -643,9 +676,7 @@ public class ScratchCompiler private constructor(
                 } else {
                     aload_0
                     getfield(SPRITE_BASE, if (block.opcode == ScratchOpcodes.MOTION_XPOSITION) "x" else "y", double)
-                    if (type != CompileDataType.NUMBER) {
-                        invokestatic(SCRATCH_ABI, "doubleToString", String::class, double)
-                    }
+                    resultNumber(type)
                 }
             }
             ScratchOpcodes.LOOKS_SAY -> {
@@ -764,7 +795,7 @@ public class ScratchCompiler private constructor(
                 if (!target.isStage) {
                     aload_0
                     val menu = (block.inputs.getValue("TOUCHINGOBJECTMENU") as ReferenceInput).value
-                    when (val target = menu.fields.getValue("TOUCHINGOBJECTMENU").name) {
+                    when (val target = menu!!.fields.getValue("TOUCHINGOBJECTMENU").name) {
                         "_edge_" -> {
                             invokevirtual(SPRITE_BASE, "touchingEdge", boolean)
                         }
@@ -781,35 +812,27 @@ public class ScratchCompiler private constructor(
                 } else {
                     iload_1
                 }
-                if (type != CompileDataType.BOOLEAN) {
-                    invokestatic(Boolean::class.javaObjectType, "toString", String::class, boolean)
-                }
+                resultBoolean(type)
             }
             ScratchOpcodes.SENSING_KEYPRESSED -> {
                 getstatic(SCRATCH_ABI, "RENDERER", SCRATCH_RENDERER)
                 val keyOptionBlock = (block.inputs.getValue("KEY_OPTION") as ReferenceInput).value
-                val keyOption = keyOptionBlock.fields.getValue("KEY_OPTION").name
+                val keyOption = keyOptionBlock!!.fields.getValue("KEY_OPTION").name
                 push_int(EXTRA_KEYS[keyOption] ?: keyOption[0].code)
                 invokeinterface(SCRATCH_RENDERER, "keyPressed", boolean, int)
-                if (type != CompileDataType.BOOLEAN) {
-                    invokestatic(Boolean::class.javaObjectType, "toString", String::class, boolean)
-                }
+                resultBoolean(type)
             }
             ScratchOpcodes.SENSING_MOUSEDOWN -> {
                 getstatic(SCRATCH_ABI, "RENDERER", SCRATCH_RENDERER)
                 invokeinterface(SCRATCH_RENDERER, "isMouseDown", boolean)
-                if (type != CompileDataType.BOOLEAN) {
-                    invokestatic(Boolean::class.javaObjectType, "toString", String::class, boolean)
-                }
+                resultBoolean(type)
             }
             ScratchOpcodes.SENSING_TIMER -> {
                 getstatic(SCRATCH_ABI, "RENDERER", SCRATCH_RENDERER)
                 invokeinterface(SCRATCH_RENDERER, "getAbsoluteTimer", double)
                 getstatic(SCRATCH_ABI, "timerStart", double)
                 dsub
-                if (type != CompileDataType.NUMBER) {
-                    invokestatic(SCRATCH_ABI, "doubleToString", String::class, double)
-                }
+                resultNumber(type)
             }
             ScratchOpcodes.OPERATOR_ADD,
             ScratchOpcodes.OPERATOR_SUBTRACT,
@@ -826,17 +849,13 @@ public class ScratchCompiler private constructor(
                     ScratchOpcodes.OPERATOR_MOD -> invokestatic(SCRATCH_ABI, "mod", double, double, double)
                     else -> throw AssertionError()
                 }
-                if (type != CompileDataType.NUMBER) {
-                    invokestatic(SCRATCH_ABI, "doubleToString", String::class, double)
-                }
+                resultNumber(type)
             }
             ScratchOpcodes.OPERATOR_RANDOM -> {
                 compileInput(block.inputs.getValue("FROM"), CompileDataType.NUMBER)
                 compileInput(block.inputs.getValue("TO"), CompileDataType.NUMBER)
                 invokestatic(SCRATCH_ABI, "flooredRandom", double, double, double)
-                if (type != CompileDataType.NUMBER) {
-                    invokestatic(SCRATCH_ABI, "doubleToString", String::class, double)
-                }
+                resultNumber(type)
             }
             ScratchOpcodes.OPERATOR_GT,
             ScratchOpcodes.OPERATOR_LT,
@@ -850,9 +869,7 @@ public class ScratchCompiler private constructor(
                     else -> throw AssertionError()
                 })
                 invokestatic(SCRATCH_ABI, "compareValues", boolean, String::class, String::class, int)
-                if (type != CompileDataType.BOOLEAN) {
-                    invokestatic(Boolean::class.javaObjectType, "toString", String::class, boolean)
-                }
+                resultBoolean(type)
             }
             ScratchOpcodes.OPERATOR_AND,
             ScratchOpcodes.OPERATOR_OR -> {
@@ -863,17 +880,13 @@ public class ScratchCompiler private constructor(
                 } else {
                     ior
                 }
-                if (type != CompileDataType.BOOLEAN) {
-                    invokestatic(Boolean::class.javaObjectType, "toString", String::class, boolean)
-                }
+                resultBoolean(type)
             }
             ScratchOpcodes.OPERATOR_NOT -> {
                 compileInput(block.inputs.getValue("OPERAND"), CompileDataType.BOOLEAN)
                 iconst_1
                 ixor
-                if (type != CompileDataType.BOOLEAN) {
-                    invokestatic(Boolean::class.javaObjectType, "toString", String::class, boolean)
-                }
+                resultBoolean(type)
             }
             ScratchOpcodes.OPERATOR_JOIN -> {
                 compileInput(block.inputs.getValue("STRING1"))
@@ -907,9 +920,7 @@ public class ScratchCompiler private constructor(
                         invokestatic(Math::class, "toDegrees", double, double)
                     }
                 }
-                if (type != CompileDataType.NUMBER) {
-                    invokestatic(SCRATCH_ABI, "doubleToString", String::class, double)
-                }
+                resultNumber(type)
             }
             ScratchOpcodes.DATA_SETVARIABLETO -> {
                 val variable = block.fields.getValue("VARIABLE")
@@ -1011,6 +1022,84 @@ public class ScratchCompiler private constructor(
                 invokeinterface(List::class, "size", int)
                 coerceInt(type)
             }
+            ScratchOpcodes.PROCEDURES_DEFINITION -> {}
+            ScratchOpcodes.PROCEDURES_CALL -> {
+                val procedure = procedureBodies.getValue(block.procedureInfo!!.name)
+                fun createJob() {
+                    new(SCHEDULED_JOB)
+                    dup
+                    getstatic(
+                        escapePackageName("scratch", projectName, "target", target.name),
+                        escapeUnqualifiedName(procedure.id),
+                        ASYNC_HANDLER
+                    )
+                    if (block.inputs.isEmpty()) {
+                        invokespecial(SCHEDULED_JOB, "<init>", void, ASYNC_HANDLER)
+                    } else {
+                        push_int(block.inputs.size)
+                        anewarray(Any::class)
+                        val argTypes = procedureArgs
+                            .getValue(procedure)
+                            .asSequence()
+                            .map { it.value }
+                            .sortedBy { it.first }
+                            .map { it.second.opcode }
+                            .toList()
+                        block.inputs.values.forEachIndexed { index, input ->
+                            dup
+                            push_int(index)
+                            if (argTypes[index] == ScratchOpcodes.ARGUMENT_REPORTER_STRING_NUMBER) {
+                                compileInput(input)
+                            } else {
+                                compileInput(input, CompileDataType.BOOLEAN)
+                                invokestatic(
+                                    Boolean::class.javaObjectType, "valueOf",
+                                    Boolean::class.javaObjectType, boolean
+                                )
+                            }
+                            aastore
+                        }
+                        invokespecial(SCHEDULED_JOB, "<init>", void, ASYNC_HANDLER, Array<Any>::class)
+                    }
+                }
+                if (procedure in awaitlessProcedures) {
+                    createJob()
+                    aload_0
+                    invokevirtual(SCHEDULED_JOB, "step", int, TARGET_BASE)
+                    pop
+                } else {
+                    await {
+                        createJob()
+                    }
+                }
+            }
+            ScratchOpcodes.ARGUMENT_REPORTER_STRING_NUMBER,
+            ScratchOpcodes.ARGUMENT_REPORTER_BOOLEAN -> {
+                val argIndex = currentProcedureArgs.getValue(block.fields.getValue("VALUE").name).first
+                if (argIndex == -1) {
+                    if (block.opcode == ScratchOpcodes.ARGUMENT_REPORTER_STRING_NUMBER) {
+                        ldc("")
+                    } else {
+                        iconst_0
+                    }
+                } else {
+                    aload_1
+                    getfield(SCHEDULED_JOB, "args", Array<Any>::class)
+                    push_int(argIndex)
+                    aaload
+                    if (block.opcode == ScratchOpcodes.ARGUMENT_REPORTER_STRING_NUMBER) {
+                        checkcast(String::class)
+                    } else {
+                        checkcast(Boolean::class.javaObjectType)
+                        invokevirtual(Boolean::class.javaObjectType, "booleanValue", boolean)
+                    }
+                }
+                if (block.opcode == ScratchOpcodes.ARGUMENT_REPORTER_BOOLEAN) {
+                    resultBoolean(type)
+                } else if (type == CompileDataType.NUMBER) {
+                    invokestatic(SCRATCH_ABI, "getNumber", double, String::class)
+                }
+            }
             else -> throw IllegalArgumentException("Don't know how to compile block ${block.opcode}")
         }
         block.next?.let { return compileBlock(it) }
@@ -1034,6 +1123,18 @@ public class ScratchCompiler private constructor(
             push_double(costume.centerX)
             push_double(costume.centerY)
             push_double(costume.coordinateScale)
+        }
+    }
+
+    private fun MethodAssembly.resultNumber(type: CompileDataType) {
+        if (type != CompileDataType.NUMBER) {
+            invokestatic(SCRATCH_ABI, "doubleToString", String::class, double)
+        }
+    }
+
+    private fun MethodAssembly.resultBoolean(type: CompileDataType) {
+        if (type != CompileDataType.BOOLEAN) {
+            invokestatic(Boolean::class.javaObjectType, "toString", String::class, boolean)
         }
     }
 
@@ -1082,6 +1183,7 @@ public class ScratchCompiler private constructor(
         addAsyncLabel()
     }
 
+    @Suppress("UnusedReceiverParameter")
     private fun MethodAssembly.maybeRedraw() {
         // TODO: figure this out
 //        if (!warp) {

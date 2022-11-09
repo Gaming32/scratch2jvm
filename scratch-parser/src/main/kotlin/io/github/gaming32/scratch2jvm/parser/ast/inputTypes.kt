@@ -5,6 +5,7 @@ import com.google.gson.JsonElement
 import io.github.gaming32.scratch2jvm.parser.PrettyPrintable
 import io.github.gaming32.scratch2jvm.parser.data.ScratchList
 import io.github.gaming32.scratch2jvm.parser.data.ScratchVariable
+import io.github.gaming32.scratch2jvm.parser.data.VariableLike
 import kotlin.reflect.KProperty1
 
 public enum class ScratchInputTypes(public vararg val ids: Int) {
@@ -13,6 +14,7 @@ public enum class ScratchInputTypes(public vararg val ids: Int) {
     FALLBACK(3),
     VALUE(4, 5, 6, 7, 8, 10),
     COLOR(9),
+    VARIABLE_LIKE(11),
     VARIABLE(12),
     LIST(13),
     ;
@@ -55,6 +57,9 @@ public sealed interface ScratchInput<T> : PrettyPrintable {
                 )
                 ScratchInputTypes.VALUE -> ValueInput(data[1].asString)
                 ScratchInputTypes.COLOR -> ValueInput(data[1].asString.substring(1).toInt(16).toString())
+                ScratchInputTypes.VARIABLE_LIKE -> VariableLikeInput(
+                    VariableLike.of(data[2].asString, data[1].asString)
+                )
                 ScratchInputTypes.VARIABLE -> VariableInput(variables.getValue(data[2].asString))
                 ScratchInputTypes.LIST -> ListInput(lists.getValue(data[2].asString))
             }
@@ -85,6 +90,10 @@ public data class FallbackInput<A, B>(
 
 public data class ValueInput(override val value: String) : ScratchInput<String> {
     override val type: ScratchInputTypes get() = ScratchInputTypes.VALUE
+}
+
+public data class VariableLikeInput(override val value: VariableLike) : ScratchInput<VariableLike> {
+    override val type: ScratchInputTypes get() = ScratchInputTypes.VARIABLE_LIKE
 }
 
 public data class VariableInput(override val value: ScratchVariable) : ScratchInput<ScratchVariable> {

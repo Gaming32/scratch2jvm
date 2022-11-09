@@ -3,11 +3,23 @@ package io.github.gaming32.scratch2jvm.parser.data
 import com.google.gson.JsonArray
 import io.github.gaming32.scratch2jvm.parser.PrettyPrintable
 
+public sealed interface VariableLike : PrettyPrintable {
+    private class Impl(override val id: String, override val name: String) : VariableLike
+
+    public companion object {
+        @JvmStatic
+        public fun of(id: String, name: String): VariableLike = Impl(id, name)
+    }
+
+    public val id: String
+    public val name: String
+}
+
 public data class ScratchVariable(
-    public val id: String,
-    public val name: String,
+    override val id: String,
+    override val name: String,
     public val value: String = ""
-) : PrettyPrintable {
+) : VariableLike {
     public companion object {
         @JvmStatic
         public fun fromJson(id: String, data: JsonArray): ScratchVariable = ScratchVariable(
@@ -19,10 +31,10 @@ public data class ScratchVariable(
 }
 
 public data class ScratchList(
-    public val id: String,
-    public val name: String,
+    override val id: String,
+    override val name: String,
     public val value: List<String> = listOf()
-) : PrettyPrintable {
+) : VariableLike {
     public companion object {
         @JvmStatic
         public fun fromJson(id: String, data: JsonArray): ScratchList = ScratchList(

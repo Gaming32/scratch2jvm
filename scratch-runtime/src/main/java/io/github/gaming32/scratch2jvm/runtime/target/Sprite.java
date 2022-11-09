@@ -4,14 +4,16 @@ import io.github.gaming32.scratch2jvm.runtime.AABB;
 import io.github.gaming32.scratch2jvm.runtime.ScratchABI;
 import io.github.gaming32.scratch2jvm.runtime.ScratchCostume;
 import io.github.gaming32.scratch2jvm.runtime.async.ScheduledJob;
+import io.github.gaming32.scratch2jvm.runtime.extensions.PenState;
 import io.github.gaming32.scratch2jvm.runtime.util.NamedIndexedArray;
 import org.joml.Math;
 
 @SuppressWarnings("unused")
 public abstract class Sprite extends Target {
     public double x, y, size, direction;
-    public boolean draggable;
+    public boolean draggable, visible;
     public RotationStyle rotationStyle;
+    public PenState penState;
 
     protected Sprite(String name, NamedIndexedArray<ScratchCostume> costumes) {
         super(name, false, costumes);
@@ -25,12 +27,10 @@ public abstract class Sprite extends Target {
     }
 
     public final void setXY(double x, double y) {
-        setX(x);
-        setY(y);
-    }
-
-    public final void setX(double x) {
         final ScratchCostume costume = getCostume();
+
+        final double lastX = this.x, lastY = this.y;
+
         final double leftX = x - costume.centerX;
         final double rightX = leftX + costume.width;
         if (rightX < -230) {
@@ -39,10 +39,7 @@ public abstract class Sprite extends Target {
             x = 230 + costume.centerX;
         }
         this.x = x;
-    }
 
-    public final void setY(double y) {
-        final ScratchCostume costume = getCostume();
         final double topY = y + costume.centerY;
         final double bottomY = topY - costume.height;
         if (topY < -170) {
@@ -51,11 +48,25 @@ public abstract class Sprite extends Target {
             y = 170 - costume.centerY + costume.height;
         }
         this.y = y;
+
+        if (penState != null && (x != lastX || y != lastY) && penState.penDown) {
+            ScratchABI.RENDERER.penLine(lastX, lastY, x, y, penState);
+        }
+    }
+
+    public final void setX(double x) {
+        setXY(x, y);
+    }
+
+    public final void setY(double y) {
+        setXY(x, y);
     }
 
     public final void moveSteps(double steps) {
-        setX(x + Math.sin(Math.toRadians(direction)) * steps);
-        setY(y + Math.cos(Math.toRadians(direction)) * steps);
+        setXY(
+            x + Math.sin(Math.toRadians(direction)) * steps,
+            y + Math.cos(Math.toRadians(direction)) * steps
+        );
     }
 
     public final void ifOnEdgeBounce() {

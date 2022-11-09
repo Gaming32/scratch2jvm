@@ -16,6 +16,7 @@ public data class ScratchTarget(
     public val costumes: List<ScratchCostume>,
     public val volume: Double = 100.0,
     public val layerOrder: Int = 0,
+    public val visible: Boolean = true,
     public val tempo: Double = 60.0,
     public val x: Double = 0.0,
     public val y: Double = 0.0,

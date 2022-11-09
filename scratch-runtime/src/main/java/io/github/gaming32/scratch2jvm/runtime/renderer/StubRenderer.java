@@ -1,7 +1,9 @@
 package io.github.gaming32.scratch2jvm.runtime.renderer;
 
+import io.github.gaming32.scratch2jvm.runtime.ScratchABI;
 import io.github.gaming32.scratch2jvm.runtime.ScratchApplication;
 import io.github.gaming32.scratch2jvm.runtime.async.AsyncScheduler;
+import io.github.gaming32.scratch2jvm.runtime.extensions.PenState;
 
 public final class StubRenderer implements ScratchRenderer {
     private ScratchApplication application;
@@ -54,5 +56,17 @@ public final class StubRenderer implements ScratchRenderer {
     @Override
     public double getAbsoluteTimer() {
         return (System.nanoTime() - timerStart) / 1e9;
+    }
+
+    @Override
+    public void penClear() {
+        if (ScratchABI.DO_LOGGING) {
+            System.out.println("PEN CLEAR");
+        }
+    }
+
+    @Override
+    public void penLine(double x1, double y1, double x2, double y2, PenState state) {
+        System.out.println("PEN LINE: " + x1 + ", " + y1 + " -> " + x2 + ", " + y2);
     }
 }

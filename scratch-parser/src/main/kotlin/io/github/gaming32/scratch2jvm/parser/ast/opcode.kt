@@ -23,6 +23,10 @@ public enum class ScratchOpcodes(public val id: String) {
     MOTION_YPOSITION("motion_yposition"),
 
     LOOKS_SAY("looks_say"),
+    LOOKS_SWITCHCOSTUMETO("looks_switchcostumeto"),
+    LOOKS_COSTUME("looks_costume"),
+    LOOKS_HIDE("looks_hide"),
+    LOOKS_COSTUMENUMBERNAME("looks_costumenumbername"),
 
     EVENT_WHENFLAGCLICKED("event_whenflagclicked"),
 
@@ -33,6 +37,9 @@ public enum class ScratchOpcodes(public val id: String) {
     CONTROL_IF_ELSE("control_if_else"),
     CONTROL_WAIT_UNTIL("control_wait_until"),
     CONTROL_STOP("control_stop"),
+    CONTROL_START_AS_CLONE("control_start_as_clone"),
+    CONTROL_CREATE_CLONE_OF("control_create_clone_of"),
+    CONTROL_CREATE_CLONE_OF_MENU("control_create_clone_of_menu"),
 
     SENSING_TOUCHINGOBJECT("sensing_touchingobject"),
     SENSING_TOUCHINGOBJECTMENU("sensing_touchingobjectmenu"),
@@ -75,6 +82,12 @@ public enum class ScratchOpcodes(public val id: String) {
 
     ARGUMENT_REPORTER_STRING_NUMBER("argument_reporter_string_number"),
     ARGUMENT_REPORTER_BOOLEAN("argument_reporter_boolean"),
+
+    PEN_CLEAR("pen_clear"),
+    PEN_PEN_DOWN("pen_penDown"),
+    PEN_PEN_UP("pen_penUp"),
+    PEN_SET_PEN_COLOR_TO_COLOR("pen_setPenColorToColor"),
+    PEN_SET_PEN_SIZE_TO("pen_setPenSizeTo"),
     ;
 
     public companion object {
@@ -108,6 +121,9 @@ public object MotionOpcodes {
 
 public object LooksOpcodes {
     public val SAY: ScratchOpcodes = ScratchOpcodes.LOOKS_SAY
+    public val SWITCH_COSTUME_TO: ScratchOpcodes = ScratchOpcodes.LOOKS_SWITCHCOSTUMETO
+    public val HIDE: ScratchOpcodes = ScratchOpcodes.LOOKS_HIDE
+    public val COSTUME_NUMBER_NAME: ScratchOpcodes = ScratchOpcodes.LOOKS_COSTUMENUMBERNAME
 }
 
 public object EventsOpcodes {
@@ -120,6 +136,8 @@ public object ControlOpcodes {
     public val FOREVER: ScratchOpcodes = ScratchOpcodes.CONTROL_FOREVER
     public val IF: ScratchOpcodes = ScratchOpcodes.CONTROL_IF
     public val STOP: ScratchOpcodes = ScratchOpcodes.CONTROL_STOP
+    public val START_AS_CLONE: ScratchOpcodes = ScratchOpcodes.CONTROL_START_AS_CLONE
+    public val CREATE_CLONE_OF: ScratchOpcodes = ScratchOpcodes.CONTROL_CREATE_CLONE_OF
 }
 
 public object SensingOpcodes {
@@ -169,4 +187,12 @@ public object MyBlocksOpcodes {
     public object ArgumentTypes {
         public val REPORTER_STRING_NUMBER: ScratchOpcodes = ScratchOpcodes.ARGUMENT_REPORTER_STRING_NUMBER
     }
+}
+
+public object PenOpcodes {
+    public val CLEAR: ScratchOpcodes = ScratchOpcodes.PEN_CLEAR
+    public val PEN_DOWN: ScratchOpcodes = ScratchOpcodes.PEN_PEN_DOWN
+    public val PEN_UP: ScratchOpcodes = ScratchOpcodes.PEN_PEN_UP
+    public val SET_PEN_COLOR_TO_COLOR: ScratchOpcodes = ScratchOpcodes.PEN_SET_PEN_COLOR_TO_COLOR
+    public val SET_PEN_SIZE_TO: ScratchOpcodes = ScratchOpcodes.PEN_SET_PEN_SIZE_TO
 }

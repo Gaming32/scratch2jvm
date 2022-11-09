@@ -22,6 +22,7 @@ public final class ScratchABI {
     public static final AsyncScheduler SCHEDULER = new AsyncScheduler();
     public static final ScratchRenderer RENDERER;
     public static double timerStart = 0;
+    public static int cloneCount = 0;
 
     static {
         boolean headless = Boolean.getBoolean("scratch.headless");
@@ -180,5 +181,10 @@ public final class ScratchABI {
         } catch (NumberFormatException e) {
             return v1.compareToIgnoreCase(v2) == check;
         }
+    }
+
+    public static double wrapClamp(double n, double min, double max) {
+        final double range = (max - min) + 1;
+        return n - (Math.floor((n - min) / range) * range);
     }
 }

@@ -47,7 +47,7 @@ public fun compileToJar(inFile: File, outFile: File, fatness: FatnessLevel = Fat
                 val writer = ClassWriter(ClassWriter.COMPUTE_FRAMES)
 //                val writer = ClassWriter(ClassWriter.COMPUTE_MAXS)
                 clazz.accept(writer)
-//                if ("Sprite1" in name) {
+//                if ("Rope" in name) {
 //                    PrintWriter("test.txt").use {
 //                        CheckClassAdapter.verify(ClassReader(writer.toByteArray()), true, it)
 //                    }

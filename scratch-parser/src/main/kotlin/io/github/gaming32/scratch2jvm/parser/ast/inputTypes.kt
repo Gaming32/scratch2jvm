@@ -12,6 +12,7 @@ public enum class ScratchInputTypes(public vararg val ids: Int) {
     BLOCK_STACK(2),
     FALLBACK(3),
     VALUE(4, 5, 6, 7, 8, 10),
+    COLOR(9),
     VARIABLE(12),
     LIST(13),
     ;
@@ -53,6 +54,7 @@ public sealed interface ScratchInput<T> : PrettyPrintable {
                     parse(data[2], blocks, variables, lists)
                 )
                 ScratchInputTypes.VALUE -> ValueInput(data[1].asString)
+                ScratchInputTypes.COLOR -> ValueInput(data[1].asString.substring(1).toInt(16).toString())
                 ScratchInputTypes.VARIABLE -> VariableInput(variables.getValue(data[2].asString))
                 ScratchInputTypes.LIST -> ListInput(lists.getValue(data[2].asString))
             }

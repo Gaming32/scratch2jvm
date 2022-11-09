@@ -9,6 +9,10 @@ public class ScratchProject(root: JsonObject) : PrettyPrintable {
         .entrySet()
         .associate { it.key to it.value.asString }
 
+    public val extensions: Set<String> = root.getAsJsonArray("extensions")
+        ?.mapTo(mutableSetOf()) { it.asString }
+        ?: setOf()
+
     public val monitors: Map<String, ScratchMonitor> = root.getAsJsonArray("monitors")
         .asSequence()
         .map { ScratchMonitor.fromJson(it.asJsonObject) }

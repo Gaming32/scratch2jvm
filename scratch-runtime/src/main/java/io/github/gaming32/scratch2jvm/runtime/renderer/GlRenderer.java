@@ -3,8 +3,10 @@ package io.github.gaming32.scratch2jvm.runtime.renderer;
 import io.github.gaming32.scratch2jvm.runtime.ScratchApplication;
 import io.github.gaming32.scratch2jvm.runtime.ScratchCostume;
 import io.github.gaming32.scratch2jvm.runtime.async.AsyncScheduler;
+import io.github.gaming32.scratch2jvm.runtime.extensions.PenState;
 import io.github.gaming32.scratch2jvm.runtime.target.RotationStyle;
 import io.github.gaming32.scratch2jvm.runtime.target.Sprite;
+import io.github.gaming32.scratch2jvm.runtime.target.Stage;
 import io.github.gaming32.scratch2jvm.runtime.target.Target;
 import org.joml.Vector2i;
 import org.lwjgl.Version;
@@ -33,6 +35,8 @@ import static org.lwjgl.nanovg.NanoSVG.*;
 import static org.lwjgl.nanovg.NanoVGGL2.*;
 import static org.lwjgl.opengl.GL11.*;
 import static org.lwjgl.opengl.GL13.GL_MULTISAMPLE;
+import static org.lwjgl.opengl.GL30.*;
+import static org.lwjgl.system.MemoryUtil.NULL;
 
 public final class GlRenderer implements ScratchRenderer {
     private static final double IDEAL_ASPECT = 480.0 / 360.0;
@@ -49,6 +53,10 @@ public final class GlRenderer implements ScratchRenderer {
     private long nanovg;
     private long rasterizer;
     private double lastTime;
+
+    private int penFramebuffer = -1;
+    private int penTexture = -1;
+    private boolean penBound;
 
     @Override
     public void init() {
@@ -73,25 +81,56 @@ public final class GlRenderer implements ScratchRenderer {
         glfwMakeContextCurrent(window);
         GL.createCapabilities();
 
+        if (application.penScale != -1) {
+            penFramebuffer = glGenFramebuffers();
+            glBindFramebuffer(GL_FRAMEBUFFER, penFramebuffer);
+            penTexture = glGenTextures();
+            glBindTexture(GL_TEXTURE_2D, penTexture);
+            glTexImage2D(
+                GL_TEXTURE_2D,
+                0,
+                GL_RGBA,
+                480 * application.penScale,
+                360 * application.penScale,
+                0,
+                GL_RGBA,
+                GL_UNSIGNED_BYTE,
+                NULL
+            );
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, penTexture, 0);
+            if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+                throw new RuntimeException(
+                    "Couldn't create framebuffer: 0x" + Integer.toHexString(glCheckFramebufferStatus(GL_FRAMEBUFFER))
+                );
+            }
+            penBound = true;
+        }
+
         //noinspection resource
         glfwSetWindowSizeCallback(window, (window2, width, height) -> {
             windowSize.set(width, height);
-            setViewport();
+            setBars();
+            if (!setRenderContext(false)) {
+                setWindowViewport();
+            }
         });
-        setViewport();
+        setBars();
+        if (!setRenderContext(false)) {
+            setWindowViewport();
+        }
 
         glDisable(GL_DEPTH_TEST);
         glEnable(GL_MULTISAMPLE);
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-        glClearColor(1, 1, 1, 1);
-
         nanovg = nvgCreate(NVG_ANTIALIAS);
         rasterizer = nsvgCreateRasterizer();
     }
 
-    private void setViewport() {
+    private void setBars() {
         final double aspect = windowSize.x / (double)windowSize.y;
         int offsetX = 0;
         int offsetY = 0;
@@ -107,7 +146,9 @@ public final class GlRenderer implements ScratchRenderer {
             offsetX = windowSize.x / 2 - width / 2;
         }
         barSize.set(offsetX, offsetY);
+    }
 
+    private void setWindowViewport() {
         glViewport(0, 0, windowSize.x, windowSize.y);
 
         glMatrixMode(GL_PROJECTION);
@@ -122,6 +163,38 @@ public final class GlRenderer implements ScratchRenderer {
         glLoadIdentity();
         glTranslatef(0, 0, -0.5f);
         glScalef((float)graphicsScale, (float)graphicsScale, 1);
+    }
+
+    private void setPenViewport() {
+        glViewport(0, 0, 480 * application.penScale, 360 * application.penScale);
+
+        glMatrixMode(GL_PROJECTION);
+        glLoadIdentity();
+        glOrtho(
+            -240 * application.penScale, 240 * application.penScale,
+            -180 * application.penScale, 180 * application.penScale,
+            -1.0, 1.0
+        );
+
+        glMatrixMode(GL_MODELVIEW);
+        glLoadIdentity();
+        glTranslatef(0, 0, -0.5f);
+        glScalef(application.penScale, application.penScale, 1);
+    }
+
+    private boolean setRenderContext(boolean pen) {
+        if (pen == penBound) return false;
+        penBound = pen;
+        if (pen) {
+            glBindFramebuffer(GL_FRAMEBUFFER, penFramebuffer);
+            glClearColor(0, 0, 0, 0);
+            setPenViewport();
+        } else {
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+            glClearColor(1, 1, 1, 1);
+            setWindowViewport();
+        }
+        return true;
     }
 
     @Override
@@ -140,10 +213,12 @@ public final class GlRenderer implements ScratchRenderer {
 
     @Override
     public void render(AsyncScheduler scheduler) {
+        setRenderContext(false);
         glClear(GL_COLOR_BUFFER_BIT);
         glColor3f(1, 1, 1);
         glEnable(GL_TEXTURE_2D);
         for (final Target target : scheduler.getTargets()) {
+            if (target instanceof Sprite && !((Sprite)target).visible) continue;
             final ScratchCostume costume = target.getCostume();
             double x = 0, y = 0, scale = 1, direction = 90;
             RotationStyle rotationStyle = RotationStyle.DONT_ROTATE;
@@ -177,6 +252,12 @@ public final class GlRenderer implements ScratchRenderer {
             final float yShift = (float)(costume.height * costume.coordinateScale * scale / 2);
             texturedQuad(-xShift, yShift, xShift, -yShift);
             glPopMatrix();
+
+            if (target instanceof Stage && penTexture != -1) {
+                glBindTexture(GL_TEXTURE_2D, penTexture);
+                boundTex = penTexture;
+                texturedQuad(-240, -180, 240, 180);
+            }
         }
         final int barX = (int)(barSize.x / graphicsScale);
         final int barY = (int)(barSize.y / graphicsScale);
@@ -298,6 +379,12 @@ public final class GlRenderer implements ScratchRenderer {
         for (final int texture : costumeTextures.values()) {
             glDeleteTextures(texture);
         }
+        if (penTexture != -1) {
+            glDeleteTextures(penTexture);
+        }
+        if (penFramebuffer != -1) {
+            glDeleteFramebuffers(penFramebuffer);
+        }
         glfwFreeCallbacks(window);
         glfwDestroyWindow(window);
         glfwTerminate();
@@ -339,5 +426,26 @@ public final class GlRenderer implements ScratchRenderer {
     @Override
     public double getAbsoluteTimer() {
         return glfwGetTime();
+    }
+
+    ///////////////////
+    // Pen functions //
+    ///////////////////
+
+    @Override
+    public void penClear() {
+        setRenderContext(true);
+        glClear(GL_COLOR_BUFFER_BIT);
+    }
+
+    @Override
+    public void penLine(double x1, double y1, double x2, double y2, PenState state) {
+        setRenderContext(true);
+        glColor4f(state.color4f[0], state.color4f[1], state.color4f[2], state.color4f[3]);
+        glLineWidth((float)state.diameter);
+        glBegin(GL_LINES);
+        glVertex2f((float)x1, (float)y1);
+        glVertex2f((float)x2, (float)y2);
+        glEnd();
     }
 }

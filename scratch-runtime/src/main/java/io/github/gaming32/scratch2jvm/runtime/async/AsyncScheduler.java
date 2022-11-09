@@ -11,7 +11,8 @@ public final class AsyncScheduler {
     private static final int SUSPEND_CANCEL_ALL = -2;
 
     private static final int EVENT_FLAG_CLICKED = 0;
-    private static final int EVENT_COUNT = EVENT_FLAG_CLICKED + 1;
+    private static final int EVENT_START_AS_CLONE = 1;
+    private static final int EVENT_COUNT = EVENT_START_AS_CLONE + 1;
 
     private final List<Target> targets = new ArrayList<>();
     private final Map<Target, List<ScheduledJob>> jobs = new IdentityHashMap<>();

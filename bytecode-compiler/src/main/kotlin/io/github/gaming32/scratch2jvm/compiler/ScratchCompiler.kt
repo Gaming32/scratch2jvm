@@ -34,6 +34,8 @@ public class ScratchCompiler private constructor(
         public const val ASYNC_HANDLER: String = "$ASYNC_PACKAGE/AsyncHandler"
         public const val ASYNC_SCHEDULER: String = "$ASYNC_PACKAGE/AsyncScheduler"
         public const val SCHEDULED_JOB: String = "$ASYNC_PACKAGE/ScheduledJob"
+        private const val EXTENSIONS_PACKAGE: String = "$RUNTIME_PACKAGE/extensions"
+        public const val PEN_STATE: String = "$EXTENSIONS_PACKAGE/PenState"
         private const val RENDERER_PACKAGE: String = "$RUNTIME_PACKAGE/renderer"
         public const val SCRATCH_RENDERER: String = "$RENDERER_PACKAGE/ScratchRenderer"
         private const val TARGET_PACKAGE: String = "$RUNTIME_PACKAGE/target"
@@ -235,14 +237,26 @@ public class ScratchCompiler private constructor(
                                 }
                                 putfield(SPRITE_BASE, "draggable", boolean)
                                 aload_0
+                                if (target.visible) {
+                                    iconst_1
+                                } else {
+                                    iconst_0
+                                }
+                                putfield(SPRITE_BASE, "visible", boolean)
+                                aload_0
                                 getstatic(ROTATION_STYLE, target.rotationStyle.name, ROTATION_STYLE)
                                 putfield(SPRITE_BASE, "rotationStyle", ROTATION_STYLE)
+                                if ("pen" in project.extensions) {
+                                    aload_0
+                                    construct(PEN_STATE)
+                                    putfield(SPRITE_BASE, "penState", PEN_STATE)
+                                }
                             }
                             _return
                         }
 
                         if (!target.isStage) {
-                            method(private, "<init>", void, className) {
+                            method(package_private, "<init>", void, className) {
                                 aload_0
                                 ldc(target.name)
                                 aload_1
@@ -298,8 +312,19 @@ public class ScratchCompiler private constructor(
                                 putfield(SPRITE_BASE, "draggable", boolean)
                                 aload_0
                                 aload_1
-                                getfield(SPRITE_BASE, "rotationStyle", byte)
-                                putfield(SPRITE_BASE, "rotationStyle", byte)
+                                getfield(SPRITE_BASE, "visible", boolean)
+                                putfield(SPRITE_BASE, "visible", boolean)
+                                aload_0
+                                aload_1
+                                getfield(SPRITE_BASE, "rotationStyle", ROTATION_STYLE)
+                                putfield(SPRITE_BASE, "rotationStyle", ROTATION_STYLE)
+                                aload_0
+                                aload_1
+                                if ("pen" in project.extensions) {
+                                    getfield(SPRITE_BASE, "penState", PEN_STATE)
+                                    invokevirtual(PEN_STATE, "clone", PEN_STATE as TypeLike)
+                                    putfield(SPRITE_BASE, "penState", PEN_STATE)
+                                }
                                 _return
                             }
                         }
@@ -373,7 +398,10 @@ public class ScratchCompiler private constructor(
                                     athrow
                                 }
                                 when (block.opcode) {
-                                    ScratchOpcodes.EVENT_WHENFLAGCLICKED -> events += Pair(block.id, EVENT_FLAG_CLICKED)
+                                    ScratchOpcodes.EVENT_WHENFLAGCLICKED ->
+                                        events += Pair(block.id, EVENT_FLAG_CLICKED)
+                                    ScratchOpcodes.CONTROL_START_AS_CLONE ->
+                                        events += Pair(block.id, EVENT_START_AS_CLONE)
                                     else -> {}
                                 }
                             }
@@ -399,9 +427,16 @@ public class ScratchCompiler private constructor(
                     field(public + static + final, "APPLICATION", SCRATCH_APPLICATION)
 
                     clinit {
-                        construct(SCRATCH_APPLICATION, void, String::class, int) {
+                        construct(SCRATCH_APPLICATION, void, String::class, int, int) {
                             ldc(projectName)
                             push_int(30)
+                            push_int(
+                                if ("pen" in project.extensions) {
+                                    2
+                                } else {
+                                    -1
+                                }
+                            )
                         }
                         putstatic(mainClassName, "APPLICATION", SCRATCH_APPLICATION)
                         _return
@@ -440,11 +475,16 @@ public class ScratchCompiler private constructor(
 
     private tailrec fun MethodAssembly.compileInput(
         input: ScratchInput<*>,
-        type: CompileDataType = CompileDataType.DEFAULT
+        type: CompileDataType = CompileDataType.DEFAULT,
+        nullFallback: () -> Unit = {}
     ) {
         when (input.type) {
             ScratchInputTypes.SUBVALUED -> return compileBlock(
-                (input as ReferenceInput).value ?: return if (type == CompileDataType.BOOLEAN) iconst_0 else ldc(""),
+                (input as ReferenceInput).value ?: return when (type) {
+                    CompileDataType.BOOLEAN -> iconst_0
+                    CompileDataType.NUMBER -> dconst_0
+                    else -> nullFallback()
+                },
                 type
             )
             ScratchInputTypes.FALLBACK -> return compileInput((input as FallbackInput<*, *>).primary, type)
@@ -521,7 +561,6 @@ public class ScratchCompiler private constructor(
                     aload_0
                     compileInput(block.inputs.getValue("STEPS"), CompileDataType.NUMBER)
                     invokevirtual(SPRITE_BASE, "moveSteps", void, double)
-                    maybeRedraw()
                 }
             }
             ScratchOpcodes.MOTION_TURNRIGHT,
@@ -537,7 +576,6 @@ public class ScratchCompiler private constructor(
                         dsub
                     }
                     invokevirtual(SPRITE_BASE, "setDirection", void, double)
-                    maybeRedraw()
                 }
             }
             ScratchOpcodes.MOTION_GOTO,
@@ -570,7 +608,6 @@ public class ScratchCompiler private constructor(
                         compileInput(block.inputs.getValue("Y"), CompileDataType.NUMBER)
                         invokevirtual(SPRITE_BASE, "setXY", void, double, double)
                     }
-                    maybeRedraw()
                 }
             }
             ScratchOpcodes.MOTION_GLIDETO,
@@ -613,14 +650,12 @@ public class ScratchCompiler private constructor(
                     aload_0
                     compileInput(block.inputs.getValue("DIRECTION"), CompileDataType.NUMBER)
                     invokevirtual(SPRITE_BASE, "setDirection", void, double)
-                    maybeRedraw()
                 }
             }
             ScratchOpcodes.MOTION_POINTTOWARDS -> {
                 if (!target.isStage) {
                     aload_0
                     invokevirtual(SPRITE_BASE, "pointTowardsMouse", void)
-                    maybeRedraw()
                 }
             }
             ScratchOpcodes.MOTION_CHANGEXBY,
@@ -633,7 +668,6 @@ public class ScratchCompiler private constructor(
                     compileInput(block.inputs.getValue("D$axis"), CompileDataType.NUMBER)
                     dadd
                     invokevirtual(SPRITE_BASE, "set$axis", void, double)
-                    maybeRedraw()
                 }
             }
             ScratchOpcodes.MOTION_SETX,
@@ -643,14 +677,12 @@ public class ScratchCompiler private constructor(
                     aload_0
                     compileInput(block.inputs.getValue(axis), CompileDataType.NUMBER)
                     invokevirtual(SPRITE_BASE, "set$axis", void, double)
-                    maybeRedraw()
                 }
             }
             ScratchOpcodes.MOTION_IFONEDGEBOUNCE -> {
                 if (!target.isStage) {
                     aload_0
                     invokevirtual(SPRITE_BASE, "ifOnEdgeBounce", void)
-                    maybeRedraw()
                 }
             }
             ScratchOpcodes.MOTION_SETROTATIONSTYLE -> {
@@ -662,7 +694,6 @@ public class ScratchCompiler private constructor(
                         ROTATION_STYLE
                     )
                     putfield(SPRITE_BASE, "rotationStyle", ROTATION_STYLE)
-                    maybeRedraw()
                 }
             }
             ScratchOpcodes.MOTION_XPOSITION,
@@ -683,7 +714,41 @@ public class ScratchCompiler private constructor(
                 aload_0
                 compileInput(block.inputs.getValue("MESSAGE"))
                 invokestatic(SCRATCH_ABI, "say", void, TARGET_BASE, String::class)
-                maybeRedraw()
+            }
+            ScratchOpcodes.LOOKS_SWITCHCOSTUMETO -> {
+                aload_0
+                val costumeInput = block.inputs.getValue("COSTUME")
+                if (costumeInput is ReferenceInput && costumeInput.value?.opcode == ScratchOpcodes.LOOKS_COSTUME) {
+                    val costumeName = costumeInput.value!!.fields.getValue("COSTUME").name
+                    push_int(target.costumes.indexOfFirst { it.name == costumeName })
+                    putfield(TARGET_BASE, "costume", int)
+                } else {
+                    aload_0
+                    compileInput(costumeInput)
+                    invokevirtual(TARGET_BASE, "setCostume", void, String::class)
+                }
+            }
+            ScratchOpcodes.LOOKS_HIDE -> {
+                if (!target.isStage) {
+                    aload_0
+                    iconst_0
+                    putfield(SPRITE_BASE, "visible", boolean)
+                }
+            }
+            ScratchOpcodes.LOOKS_COSTUMENUMBERNAME -> {
+                aload_0
+                if (block.fields.getValue("NUMBER_NAME").name == "number") {
+                    getfield(TARGET_BASE, "costume", int)
+                    iconst_1
+                    iadd
+                    coerceInt(type)
+                } else {
+                    getfield(TARGET_BASE, "costumes", NAMED_INDEXED_ARRAY)
+                    getfield(TARGET_BASE, "costume", int)
+                    invokevirtual(NAMED_INDEXED_ARRAY, "get", Any::class, int)
+                    checkcast(SCRATCH_COSTUME)
+                    getfield(SCRATCH_COSTUME, "name", String::class)
+                }
             }
             ScratchOpcodes.EVENT_WHENFLAGCLICKED -> {}
             ScratchOpcodes.CONTROL_FOREVER -> run {
@@ -717,7 +782,7 @@ public class ScratchCompiler private constructor(
                     getState(countState)
                     dcmpg
                     ifge(l["end"])
-                    compileInput(block.inputs.getValue("SUBSTACK"))
+                    block.inputs["SUBSTACK"]?.let { compileInput(it) }
                     setState(indexState) {
                         getState(indexState)
                         dconst_1
@@ -737,7 +802,7 @@ public class ScratchCompiler private constructor(
                         compileInput(condition, CompileDataType.BOOLEAN)
                         ifeq(l["condition_false"])
                     }
-                    compileInput(block.inputs.getValue("SUBSTACK"))
+                    block.inputs["SUBSTACK"]?.let { compileInput(it) }
                     +l["condition_false"]
                 }
             }
@@ -751,10 +816,10 @@ public class ScratchCompiler private constructor(
                         compileInput(condition, CompileDataType.BOOLEAN)
                         ifeq(l["condition_false"])
                     }
-                    compileInput(block.inputs.getValue("SUBSTACK"))
+                    block.inputs["SUBSTACK"]?.let { compileInput(it) }
                     goto(l["if_end"])
                     +l["condition_false"]
-                    compileInput(block.inputs.getValue("SUBSTACK2"))
+                    block.inputs["SUBSTACK2"]?.let { compileInput(it) }
                     +l["if_end"]
                 }
             }
@@ -790,6 +855,48 @@ public class ScratchCompiler private constructor(
                     invokevirtual(ASYNC_SCHEDULER, "cancelJobs", void, TARGET_BASE, SCHEDULED_JOB)
                 }
                 else -> throw IllegalArgumentException("Unknown control_stop STOP_OPTION $stopOption")
+            }
+            ScratchOpcodes.CONTROL_START_AS_CLONE -> {}
+            ScratchOpcodes.CONTROL_CREATE_CLONE_OF -> {
+                getstatic(SCRATCH_ABI, "cloneCount", int)
+                dup
+                push_int(300)
+                L.scope(this).also { l ->
+                    if_icmpge(l["clone_count_reached"])
+                    iconst_1
+                    iadd
+                    putstatic(SCRATCH_ABI, "cloneCount", int)
+                    val cloneOption = (block.inputs.getValue("CLONE_OPTION") as ReferenceInput).value!!
+                    val sprite = cloneOption.fields.getValue("CLONE_OPTION").name
+                    val className = if (sprite == "_myself_") {
+                        escapePackageName("scratch", projectName, "target", target.name)
+                    } else {
+                        escapePackageName("scratch", projectName, "target", sprite)
+                    }
+                    getstatic(SCRATCH_ABI, "SCHEDULER", ASYNC_SCHEDULER)
+                    dup
+                    push_int(EVENT_START_AS_CLONE)
+                    swap
+                    construct(className, void, className) {
+                        if (sprite == "_myself_") {
+                            aload_0
+                        } else {
+                            getstatic(className, "INSTANCE", className)
+                        }
+                    }
+                    dup_x1
+                    if (sprite == "_myself_") {
+                        aload_0
+                    } else {
+                        getstatic(className, "INSTANCE", className)
+                    }
+                    invokevirtual(ASYNC_SCHEDULER, "addTarget", void, TARGET_BASE, TARGET_BASE)
+                    invokevirtual(ASYNC_SCHEDULER, "scheduleEvent", void, int, TARGET_BASE)
+                    goto(l["clone_count_not_reached"])
+                    +l["clone_count_reached"]
+                    pop
+                    +l["clone_count_not_reached"]
+                }
             }
             ScratchOpcodes.SENSING_TOUCHINGOBJECT -> {
                 if (!target.isStage) {
@@ -1008,6 +1115,9 @@ public class ScratchCompiler private constructor(
                 getList(block.fields.getValue("LIST"))
                 compileInput(block.inputs.getValue("INDEX"), CompileDataType.NUMBER)
                 invokestatic(SCRATCH_ABI, "itemOfList", String::class, List::class, double)
+                if (type == CompileDataType.NUMBER) {
+                    invokestatic(SCRATCH_ABI, "getNumber", double, String::class)
+                }
             }
             ScratchOpcodes.DATA_ITEMNUMOFLIST -> {
                 getList(block.fields.getValue("LIST"))
@@ -1100,6 +1210,40 @@ public class ScratchCompiler private constructor(
                     invokestatic(SCRATCH_ABI, "getNumber", double, String::class)
                 }
             }
+            ScratchOpcodes.PEN_CLEAR -> {
+                getstatic(SCRATCH_ABI, "RENDERER", SCRATCH_RENDERER)
+                invokeinterface(SCRATCH_RENDERER, "penClear", void)
+            }
+            ScratchOpcodes.PEN_PEN_DOWN,
+            ScratchOpcodes.PEN_PEN_UP -> {
+                if (!target.isStage) {
+                    aload_0
+                    getfield(SPRITE_BASE, "penState", PEN_STATE)
+                    if (block.opcode == ScratchOpcodes.PEN_PEN_DOWN) {
+                        iconst_1
+                    } else {
+                        iconst_0
+                    }
+                    putfield(PEN_STATE, "penDown", boolean)
+                }
+            }
+            ScratchOpcodes.PEN_SET_PEN_COLOR_TO_COLOR -> {
+                if (!target.isStage) {
+                    aload_0
+                    getfield(SPRITE_BASE, "penState", PEN_STATE)
+                    compileInput(block.inputs.getValue("COLOR"), CompileDataType.NUMBER)
+                    d2i
+                    invokevirtual(PEN_STATE, "setColorRgb", void, int)
+                }
+            }
+            ScratchOpcodes.PEN_SET_PEN_SIZE_TO -> {
+                if (!target.isStage) {
+                    aload_0
+                    getfield(SPRITE_BASE, "penState", PEN_STATE)
+                    compileInput(block.inputs.getValue("SIZE"), CompileDataType.NUMBER)
+                    invokevirtual(PEN_STATE, "setSize", void, double)
+                }
+            }
             else -> throw IllegalArgumentException("Don't know how to compile block ${block.opcode}")
         }
         block.next?.let { return compileBlock(it) }
@@ -1183,14 +1327,4 @@ public class ScratchCompiler private constructor(
         addAsyncLabel()
     }
 
-    @Suppress("UnusedReceiverParameter")
-    private fun MethodAssembly.maybeRedraw() {
-        // TODO: figure this out
-//        if (!warp) {
-//            // TODO: check visibility
-//            getstatic(SCRATCH_ABI, "RENDERER", SCRATCH_RENDERER)
-//            getstatic(SCRATCH_ABI, "SCHEDULER", ASYNC_SCHEDULER)
-//            invokeinterface(SCRATCH_RENDERER, "render", void, ASYNC_SCHEDULER)
-//        }
-    }
 }

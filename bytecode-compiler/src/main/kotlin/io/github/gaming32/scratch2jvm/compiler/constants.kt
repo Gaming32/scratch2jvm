@@ -4,7 +4,8 @@ public const val SUSPEND_NO_RESCHEDULE: Int = -1
 public const val SUSPEND_CANCEL_ALL: Int = -2
 
 public const val EVENT_FLAG_CLICKED: Int = 0
-public const val EVENT_COUNT: Int = EVENT_FLAG_CLICKED + 1
+public const val EVENT_START_AS_CLONE: Int = 1
+public const val EVENT_COUNT: Int = EVENT_START_AS_CLONE + 1
 
 public val EXTRA_KEYS: Map<String, Int> = mapOf(
     "space" to ' '.code,

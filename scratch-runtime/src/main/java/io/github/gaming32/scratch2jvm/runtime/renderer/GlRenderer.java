@@ -105,21 +105,18 @@ public final class GlRenderer implements ScratchRenderer {
                     "Couldn't create framebuffer: 0x" + Integer.toHexString(glCheckFramebufferStatus(GL_FRAMEBUFFER))
                 );
             }
-            penBound = true;
         }
 
         //noinspection resource
         glfwSetWindowSizeCallback(window, (window2, width, height) -> {
             windowSize.set(width, height);
             setBars();
-            if (!setRenderContext(false)) {
-                setWindowViewport();
-            }
+            penBound = true; // Force reset
+            setRenderContext(false);
         });
         setBars();
-        if (!setRenderContext(false)) {
-            setWindowViewport();
-        }
+        penBound = true; // Force reset
+        setRenderContext(false);
 
         glDisable(GL_DEPTH_TEST);
         glEnable(GL_MULTISAMPLE);
@@ -182,8 +179,8 @@ public final class GlRenderer implements ScratchRenderer {
         glScalef(application.penScale, application.penScale, 1);
     }
 
-    private boolean setRenderContext(boolean pen) {
-        if (pen == penBound) return false;
+    private void setRenderContext(boolean pen) {
+        if (pen == penBound) return;
         penBound = pen;
         if (pen) {
             glBindFramebuffer(GL_FRAMEBUFFER, penFramebuffer);
@@ -194,7 +191,6 @@ public final class GlRenderer implements ScratchRenderer {
             glClearColor(1, 1, 1, 1);
             setWindowViewport();
         }
-        return true;
     }
 
     @Override
@@ -442,6 +438,7 @@ public final class GlRenderer implements ScratchRenderer {
     public void penLine(double x1, double y1, double x2, double y2, PenState state) {
         setRenderContext(true);
         glColor4f(state.color4f[0], state.color4f[1], state.color4f[2], state.color4f[3]);
+        glDisable(GL_TEXTURE_2D);
         glLineWidth((float)state.diameter);
         glBegin(GL_LINES);
         glVertex2f((float)x1, (float)y1);

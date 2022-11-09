@@ -18,6 +18,7 @@ import io.github.gaming32.scratch2jvm.parser.falseAndTrue
 import io.github.gaming32.scratch2jvm.parser.prettyPrint
 import org.objectweb.asm.Type
 import java.lang.invoke.*
+import java.util.*
 
 public class ScratchCompiler private constructor(
     private val projectName: String,
@@ -54,6 +55,11 @@ public class ScratchCompiler private constructor(
         )
         private val DEG_TO_RAD_OPS = setOf("sin", "cos", "tan")
         private val RAD_TO_DEG_OPS = setOf("asin", "acos", "atan")
+        private val HAT_BLOCKS = EnumSet.of(
+            ScratchOpcodes.EVENT_WHENFLAGCLICKED,
+            ScratchOpcodes.CONTROL_START_AS_CLONE,
+            ScratchOpcodes.PROCEDURES_DEFINITION
+        )
 
         private val LOGGER = getLogger()
 
@@ -350,6 +356,7 @@ public class ScratchCompiler private constructor(
                                 if ((block.opcode == ScratchOpcodes.PROCEDURES_DEFINITION) != doProcedures) {
                                     continue
                                 }
+                                if (block.opcode !in HAT_BLOCKS) continue // Skip compilation of orphaned blocks
                                 if (LOGGER.isTraceEnabled) {
                                     LOGGER.trace(block.prettyPrint().toString())
                                 }

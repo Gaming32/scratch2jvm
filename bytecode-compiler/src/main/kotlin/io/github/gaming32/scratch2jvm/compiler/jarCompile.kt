@@ -1,12 +1,15 @@
 package io.github.gaming32.scratch2jvm.compiler
 
 import io.github.gaming32.scratch2jvm.parser.ScratchProjectFile
+import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassWriter
+import org.objectweb.asm.util.CheckClassAdapter
 import org.reflections.Reflections
 import org.reflections.scanners.Scanners
 import org.reflections.util.ConfigurationBuilder
 import org.reflections.util.FilterBuilder
 import java.io.File
+import java.io.PrintWriter
 import java.net.URI
 import java.nio.file.FileSystem
 import java.nio.file.FileSystems
@@ -42,16 +45,33 @@ public fun compileToJar(inFile: File, outFile: File, fatness: FatnessLevel = Fat
                     Files.copy(it, outJar.getPath(entry.name), StandardCopyOption.REPLACE_EXISTING)
                 }
             }
+            if (System.getProperty("scratch2jvm.verify").toBoolean()) {
+                LOGGER.info("Verifying classes")
+                val bytecodes = mutableMapOf<String, ByteArray>()
+                for ((name, clazz) in result.classes) {
+                    val writer = ClassWriter(ClassWriter.COMPUTE_MAXS)
+                    clazz.accept(writer)
+                    bytecodes[name] = writer.toByteArray()
+                }
+                val verifyClassLoader = object : ClassLoader() {
+                    override fun findClass(name: String): Class<*> {
+                        val bytecode = bytecodes[name.replace('.', '/')] ?:
+                            throw ClassNotFoundException(name)
+                        return defineClass(name, bytecode, 0, bytecode.size)
+                    }
+                }
+                val verifyDir = File("verify")
+                verifyDir.mkdirs()
+                for ((name, bytecode) in bytecodes) {
+                    PrintWriter(File(verifyDir, name.substringAfterLast('/') + ".verify.txt")).use {
+                        CheckClassAdapter.verify(ClassReader(bytecode), verifyClassLoader, true, it)
+                    }
+                }
+            }
             LOGGER.info("Writing classes")
             for ((name, clazz) in result.classes) {
                 val writer = ClassWriter(ClassWriter.COMPUTE_FRAMES)
-//                val writer = ClassWriter(ClassWriter.COMPUTE_MAXS)
                 clazz.accept(writer)
-//                if ("Rope" in name) {
-//                    PrintWriter("test.txt").use {
-//                        CheckClassAdapter.verify(ClassReader(writer.toByteArray()), true, it)
-//                    }
-//                }
                 val destPath = outJar.getPath("$name.class")
                 destPath.parent.createDirectories()
                 destPath.outputStream().use {

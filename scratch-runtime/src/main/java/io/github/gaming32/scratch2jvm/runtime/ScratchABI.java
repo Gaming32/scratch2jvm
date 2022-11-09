@@ -5,6 +5,7 @@ import io.github.gaming32.scratch2jvm.runtime.async.ScheduledJob;
 import io.github.gaming32.scratch2jvm.runtime.renderer.GlRenderer;
 import io.github.gaming32.scratch2jvm.runtime.renderer.ScratchRenderer;
 import io.github.gaming32.scratch2jvm.runtime.renderer.StubRenderer;
+import io.github.gaming32.scratch2jvm.runtime.target.Sprite;
 import io.github.gaming32.scratch2jvm.runtime.target.Target;
 
 import java.io.BufferedReader;
@@ -186,5 +187,38 @@ public final class ScratchABI {
     public static double wrapClamp(double n, double min, double max) {
         final double range = (max - min) + 1;
         return n - (Math.floor((n - min) / range) * range);
+    }
+
+    public static String of(Target target, String property) {
+        if (target.isStage) {
+            switch (property) {
+                case "background #":
+                case "backdrop #":
+                    return Integer.toString(target.costume + 1);
+                case "backdrop name":
+                    return target.costumes.get(target.costume).name;
+                case "volume":
+                    return doubleToString(target.volume);
+            }
+        } else {
+            switch (property) {
+                case "x position":
+                    return doubleToString(((Sprite)target).x);
+                case "y position":
+                    return doubleToString(((Sprite)target).y);
+                case "direction":
+                    return doubleToString(((Sprite)target).direction);
+                case "costume #":
+                    return Integer.toString(target.costume + 1);
+                case "costume name":
+                    return target.costumes.get(target.costume).name;
+                case "size":
+                    return doubleToString(((Sprite)target).size);
+                case "volume":
+                    return doubleToString(target.volume);
+            }
+        }
+
+        return target.getVariable(property);
     }
 }

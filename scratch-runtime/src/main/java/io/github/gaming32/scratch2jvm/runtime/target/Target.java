@@ -22,6 +22,8 @@ public abstract class Target {
 
     public abstract void registerEvents(AsyncScheduler scheduler);
 
+    public abstract String getVariable(String name);
+
     public final ScratchCostume getCostume() {
         return costumes.get(costume);
     }

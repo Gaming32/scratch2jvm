@@ -23,6 +23,18 @@ public interface ScratchRenderer {
 
     void getMousePos(double[] xBuf, double[] yBuf);
 
+    default double getMouseX() {
+        final double[] xBuf = new double[1];
+        getMousePos(xBuf, null);
+        return xBuf[0];
+    }
+
+    default double getMouseY() {
+        final double[] yBuf = new double[1];
+        getMousePos(null, yBuf);
+        return yBuf[0];
+    }
+
     boolean keyPressed(int glfwKey);
 
     double getAbsoluteTimer();

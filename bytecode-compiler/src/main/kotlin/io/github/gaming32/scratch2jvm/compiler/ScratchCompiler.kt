@@ -90,6 +90,7 @@ public class ScratchCompiler private constructor(
                         field(public + static + final, "INSTANCE", className)
 
                         for (block in target.rootBlocks.values) {
+                            if (block.opcode !in HAT_BLOCKS) continue // Skip compilation of orphaned blocks
                             field(private + static + final, escapeUnqualifiedName(block.id), ASYNC_HANDLER)
                         }
 
@@ -97,6 +98,7 @@ public class ScratchCompiler private constructor(
                             construct(className)
                             putstatic(className, "INSTANCE", className)
                             for (block in target.rootBlocks.values) {
+                                if (block.opcode !in HAT_BLOCKS) continue // Skip compilation of orphaned blocks
                                 invokedynamic(
                                     "handle",
                                     ASYNC_HANDLER as TypeLike,
@@ -433,6 +435,25 @@ public class ScratchCompiler private constructor(
                             }
                             _return
                         }
+
+                        method(public, "getVariable", String::class, String::class) {
+                            val labels = target.variables.values
+                                .asSequence()
+                                .map { it.name }
+                                .associateWith { label() }
+                            val unknownLabel = label()
+                            aload_1
+                            switchOnString(unknownLabel, labels)
+                            for ((variable, label) in labels) {
+                                +label
+                                aload_0
+                                getfield(className, variable, String::class)
+                                areturn
+                            }
+                            +unknownLabel
+                            aconst_null
+                            areturn
+                        }
                     })
                 }
 
@@ -475,6 +496,25 @@ public class ScratchCompiler private constructor(
                         invokevirtual(ASYNC_SCHEDULER, "scheduleEvent", void, int)
                         invokevirtual(ASYNC_SCHEDULER, "runUntilComplete", void)
                         _return
+                    }
+
+                    method(public + static, "getTarget", TARGET_BASE, String::class) {
+                        val labels = project.targets.values
+                            .asSequence()
+                            .map { it.name }
+                            .associateWith { label() }
+                        val unknownLabel = label()
+                        aload_0
+                        switchOnString(unknownLabel, labels)
+                        for ((targetName, label) in labels) {
+                            +label
+                            val className = escapePackageName("scratch", projectName, "target", targetName)
+                            getstatic(className, "INSTANCE", className)
+                            areturn
+                        }
+                        +unknownLabel
+                        aconst_null
+                        areturn
                     }
                 })
             },
@@ -544,9 +584,7 @@ public class ScratchCompiler private constructor(
             ScratchInputTypes.BLOCK_STACK -> return compileBlock((input as BlockStackInput).value, type)
             else -> throw IllegalArgumentException("Don't know how to compile input ${input.type} yet")
         }
-        if (type == CompileDataType.NUMBER) {
-            invokestatic(SCRATCH_ABI, "getNumber", double, String::class)
-        }
+        resultString(type)
     }
 
     private fun MethodAssembly.getList(variable: ScratchBlock.BlockField) {
@@ -713,7 +751,7 @@ public class ScratchCompiler private constructor(
             ScratchOpcodes.MOTION_YPOSITION -> {
                 if (target.isStage) {
                     if (type == CompileDataType.NUMBER) {
-                        push_double(0.0)
+                        dconst_0
                     } else {
                         ldc("0")
                     }
@@ -947,12 +985,52 @@ public class ScratchCompiler private constructor(
                 invokeinterface(SCRATCH_RENDERER, "isMouseDown", boolean)
                 resultBoolean(type)
             }
+            ScratchOpcodes.SENSING_MOUSEX,
+            ScratchOpcodes.SENSING_MOUSEY -> {
+                val axis = if (block.opcode == ScratchOpcodes.SENSING_MOUSEX) "X" else "Y"
+                getstatic(SCRATCH_ABI, "RENDERER", SCRATCH_RENDERER)
+                invokeinterface(SCRATCH_RENDERER, "getMouse$axis", double)
+                resultNumber(type)
+            }
             ScratchOpcodes.SENSING_TIMER -> {
                 getstatic(SCRATCH_ABI, "RENDERER", SCRATCH_RENDERER)
                 invokeinterface(SCRATCH_RENDERER, "getAbsoluteTimer", double)
                 getstatic(SCRATCH_ABI, "timerStart", double)
                 dsub
                 resultNumber(type)
+            }
+            ScratchOpcodes.SENSING_OF -> {
+                val objectInput = block.inputs.getValue("OBJECT")
+                val wasNull = label()
+                if (
+                    objectInput is ReferenceInput &&
+                    objectInput.value?.opcode == ScratchOpcodes.SENSING_OF_OBJECT_MENU
+                ) {
+                    val targetName = objectInput.value!!.fields.getValue("OBJECT").name
+                    val className = escapePackageName("scratch", projectName, "target", targetName)
+                    getstatic(className, "INSTANCE", className)
+                } else {
+                    val mainClassName = escapePackageName("scratch", projectName, "Main")
+                    compileInput(objectInput)
+                    invokestatic(mainClassName, "getTarget", TARGET_BASE, String::class)
+                    dup
+                    ifnull(wasNull)
+                }
+                ldc(block.fields.getValue("PROPERTY").name)
+                invokestatic(SCRATCH_ABI, "of", String::class, TARGET_BASE, String::class)
+                dup
+                val successLabel = label()
+                ifnull(wasNull)
+                resultString(type)
+                goto(successLabel)
+                +wasNull
+                pop
+                if (type == CompileDataType.NUMBER) {
+                    dconst_0
+                } else {
+                    ldc("0")
+                }
+                +successLabel
             }
             ScratchOpcodes.OPERATOR_ADD,
             ScratchOpcodes.OPERATOR_SUBTRACT,
@@ -970,6 +1048,15 @@ public class ScratchCompiler private constructor(
                     else -> throw AssertionError()
                 }
                 resultNumber(type)
+            }
+            ScratchOpcodes.OPERATOR_ROUND -> {
+                compileInput(block.inputs.getValue("NUM"), CompileDataType.NUMBER)
+                invokestatic(Math::class, "round", long, double)
+                if (type == CompileDataType.NUMBER) {
+                    l2d
+                } else {
+                    invokestatic(Long::class.javaObjectType, "toString", String::class, long)
+                }
             }
             ScratchOpcodes.OPERATOR_RANDOM -> {
                 compileInput(block.inputs.getValue("FROM"), CompileDataType.NUMBER)
@@ -1133,9 +1220,7 @@ public class ScratchCompiler private constructor(
                 getList(block.fields.getValue("LIST"))
                 compileInput(block.inputs.getValue("INDEX"), CompileDataType.NUMBER)
                 invokestatic(SCRATCH_ABI, "itemOfList", String::class, List::class, double)
-                if (type == CompileDataType.NUMBER) {
-                    invokestatic(SCRATCH_ABI, "getNumber", double, String::class)
-                }
+                resultString(type)
             }
             ScratchOpcodes.DATA_ITEMNUMOFLIST -> {
                 getList(block.fields.getValue("LIST"))
@@ -1149,6 +1234,12 @@ public class ScratchCompiler private constructor(
                 getList(block.fields.getValue("LIST"))
                 invokeinterface(List::class, "size", int)
                 coerceInt(type)
+            }
+            ScratchOpcodes.DATA_LISTCONTAINSITEM -> {
+                getList(block.fields.getValue("LIST"))
+                compileInput(block.inputs.getValue("ITEM"))
+                invokeinterface(List::class, "contains", boolean, Any::class)
+                resultBoolean(type)
             }
             ScratchOpcodes.PROCEDURES_DEFINITION -> {}
             ScratchOpcodes.PROCEDURES_CALL -> {
@@ -1225,8 +1316,8 @@ public class ScratchCompiler private constructor(
                 }
                 if (block.opcode == ScratchOpcodes.ARGUMENT_REPORTER_BOOLEAN) {
                     resultBoolean(type)
-                } else if (type == CompileDataType.NUMBER) {
-                    invokestatic(SCRATCH_ABI, "getNumber", double, String::class)
+                } else {
+                    resultString(type)
                 }
             }
             ScratchOpcodes.PEN_CLEAR -> {
@@ -1289,6 +1380,12 @@ public class ScratchCompiler private constructor(
         }
     }
 
+    private fun MethodAssembly.resultString(type: CompileDataType) {
+        if (type == CompileDataType.NUMBER) {
+            invokestatic(SCRATCH_ABI, "getNumber", double, String::class)
+        }
+    }
+
     private fun MethodAssembly.resultNumber(type: CompileDataType) {
         if (type != CompileDataType.NUMBER) {
             invokestatic(SCRATCH_ABI, "doubleToString", String::class, double)
@@ -1297,7 +1394,11 @@ public class ScratchCompiler private constructor(
 
     private fun MethodAssembly.resultBoolean(type: CompileDataType) {
         if (type != CompileDataType.BOOLEAN) {
-            invokestatic(Boolean::class.javaObjectType, "toString", String::class, boolean)
+            if (type == CompileDataType.NUMBER) {
+                i2d
+            } else {
+                invokestatic(Boolean::class.javaObjectType, "toString", String::class, boolean)
+            }
         }
     }
 

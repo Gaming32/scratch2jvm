@@ -333,6 +333,19 @@ public class ScratchCompiler private constructor(
 
                         falseAndTrue { nonProcedures ->
                             val doProcedures = !nonProcedures
+                            if (doProcedures) {
+                                for (block in target.rootBlocks.values) {
+                                    if (block.opcode != ScratchOpcodes.PROCEDURES_DEFINITION) continue
+                                    val prototype = (block.inputs.getValue("custom_block") as ReferenceInput).value!!
+                                    val procedureInfo = prototype.procedureInfo!!
+                                    procedureBodies[procedureInfo.name] = block
+                                    var index = 0
+                                    procedureArgs[block] = procedureInfo.argumentIds.associate {
+                                        val arg = (prototype.inputs.getValue(it) as ReferenceInput).value!!
+                                        arg.fields.getValue("VALUE").name to (index++ to arg)
+                                    }
+                                }
+                            }
                             for (block in target.rootBlocks.values) {
                                 if ((block.opcode == ScratchOpcodes.PROCEDURES_DEFINITION) != doProcedures) {
                                     continue
@@ -342,20 +355,13 @@ public class ScratchCompiler private constructor(
                                 }
                                 method(public, escapeMethodName(block.id), int, SCHEDULED_JOB) {
                                     this@ScratchCompiler.target = target
-                                    val prototype: ScratchBlock?
                                     if (doProcedures) {
-                                        prototype = (block.inputs.getValue("custom_block") as ReferenceInput).value!!
+                                        val prototype =
+                                            (block.inputs.getValue("custom_block") as ReferenceInput).value!!
                                         val procedureInfo = prototype.procedureInfo!!
-                                        procedureBodies[procedureInfo.name] = block
-                                        var index = 0
-                                        currentProcedureArgs = procedureInfo.argumentIds.associate {
-                                            val arg = (prototype.inputs.getValue(it) as ReferenceInput).value!!
-                                            arg.fields.getValue("VALUE").name to (index++ to arg)
-                                        }
-                                        procedureArgs[block] = currentProcedureArgs
+                                        currentProcedureArgs = procedureArgs.getValue(block)
                                         warp = procedureInfo.warp
                                     } else {
-                                        prototype = null
                                         warp = false
                                     }
                                     stateIndex = 0
@@ -792,8 +798,8 @@ public class ScratchCompiler private constructor(
                     +l["end"]
                 }
             }
-            ScratchOpcodes.CONTROL_IF -> {
-                val condition = block.inputs.getValue("CONDITION")
+            ScratchOpcodes.CONTROL_IF -> run {
+                val condition = block.inputs["CONDITION"] ?: return@run
                 L.scope(this).also { l ->
                     if (condition is BlockStackInput && condition.value.opcode == ScratchOpcodes.OPERATOR_NOT) {
                         compileInput(condition.value.inputs.getValue("OPERAND"), CompileDataType.BOOLEAN)
@@ -990,9 +996,14 @@ public class ScratchCompiler private constructor(
                 resultBoolean(type)
             }
             ScratchOpcodes.OPERATOR_NOT -> {
-                compileInput(block.inputs.getValue("OPERAND"), CompileDataType.BOOLEAN)
-                iconst_1
-                ixor
+                val operand = block.inputs["OPERAND"]
+                if (operand != null) {
+                    compileInput(operand, CompileDataType.BOOLEAN)
+                    iconst_1
+                    ixor
+                } else {
+                    iconst_1
+                }
                 resultBoolean(type)
             }
             ScratchOpcodes.OPERATOR_JOIN -> {
@@ -1156,6 +1167,7 @@ public class ScratchCompiler private constructor(
                             .map { it.second.opcode }
                             .toList()
                         block.inputs.values.forEachIndexed { index, input ->
+                            if (index >= argTypes.size) return@forEachIndexed
                             dup
                             push_int(index)
                             if (argTypes[index] == ScratchOpcodes.ARGUMENT_REPORTER_STRING_NUMBER) {
@@ -1185,7 +1197,7 @@ public class ScratchCompiler private constructor(
             }
             ScratchOpcodes.ARGUMENT_REPORTER_STRING_NUMBER,
             ScratchOpcodes.ARGUMENT_REPORTER_BOOLEAN -> {
-                val argIndex = currentProcedureArgs.getValue(block.fields.getValue("VALUE").name).first
+                val argIndex = currentProcedureArgs[block.fields.getValue("VALUE").name]?.first ?: -1
                 if (argIndex == -1) {
                     if (block.opcode == ScratchOpcodes.ARGUMENT_REPORTER_STRING_NUMBER) {
                         ldc("")
@@ -1244,7 +1256,7 @@ public class ScratchCompiler private constructor(
                     invokevirtual(PEN_STATE, "setSize", void, double)
                 }
             }
-            else -> throw IllegalArgumentException("Don't know how to compile block ${block.opcode}")
+            else -> LOGGER.warn("Don't know how to compile block {}. This could cause issues.", block.opcode)
         }
         block.next?.let { return compileBlock(it) }
     }

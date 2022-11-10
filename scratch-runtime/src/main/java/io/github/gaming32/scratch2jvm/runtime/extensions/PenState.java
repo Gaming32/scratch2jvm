@@ -55,6 +55,17 @@ public final class PenState implements Cloneable {
         updatePenColor();
     }
 
+    public void setParameter(double value, String name, boolean change) {
+        switch (name) {
+            case "color": setColor(value + (change ? color : 0)); break;
+            case "saturation": setSaturation(value + (change ? saturation : 0)); break;
+            case "brightness": setBrightness(value + (change ? brightness : 0)); break;
+            case "transparency": setTransparency(value + (change ? transparency : 0)); break;
+            default:
+                System.err.println("[WARN] Tried to set or change unknown color parameter: " + name);
+        }
+    }
+
     public void setSize(double size) {
         diameter = Math.clamp(1, 1200, size);
     }

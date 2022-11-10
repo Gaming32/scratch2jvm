@@ -890,6 +890,22 @@ public class ScratchCompiler private constructor(
                     +l["wait_end"]
                 }
             }
+            ScratchOpcodes.CONTROL_REPEAT_UNTIL -> {
+                val startLabel = label()
+                val endLabel = label()
+                +startLabel
+                val condition = block.inputs.getValue("CONDITION")
+                if (condition is BlockStackInput && condition.value.opcode == ScratchOpcodes.OPERATOR_NOT) {
+                    compileInput(condition.value.inputs.getValue("OPERAND"), CompileDataType.BOOLEAN)
+                    ifeq(endLabel)
+                } else {
+                    compileInput(condition, CompileDataType.BOOLEAN)
+                    ifne(endLabel)
+                }
+                compileInput(block.inputs.getValue("SUBSTACK"))
+                goto(startLabel)
+                +endLabel
+            }
             ScratchOpcodes.CONTROL_STOP -> when (val stopOption = block.fields.getValue("STOP_OPTION").name) {
                 "all" -> {
                     push_int(SUSPEND_CANCEL_ALL)
@@ -1344,6 +1360,29 @@ public class ScratchCompiler private constructor(
                     compileInput(block.inputs.getValue("COLOR"), CompileDataType.NUMBER)
                     d2i
                     invokevirtual(PEN_STATE, "setColorRgb", void, int)
+                }
+            }
+            ScratchOpcodes.PEN_SET_PEN_COLOR_PARAM_TO -> {
+                if (!target.isStage) {
+                    aload_0
+                    getfield(SPRITE_BASE, "penState", PEN_STATE)
+                    compileInput(block.inputs.getValue("VALUE"), CompileDataType.NUMBER)
+                    val paramInput = block.inputs.getValue("COLOR_PARAM")
+                    if (
+                        paramInput is ReferenceInput &&
+                        paramInput.value?.opcode == ScratchOpcodes.PEN_MENU_COLOR_PARAM
+                    ) {
+                        val paramName = paramInput.value!!.fields.getValue("colorParam").name
+                        invokevirtual(
+                            PEN_STATE,
+                            "set${paramName[0].uppercase()}${paramName.substring(1)}",
+                            void, double
+                        )
+                    } else {
+                        compileInput(paramInput)
+                        iconst_0
+                        invokevirtual(PEN_STATE, "setParameter", void, double, String::class, boolean)
+                    }
                 }
             }
             ScratchOpcodes.PEN_SET_PEN_SIZE_TO -> {
